@@ -20,8 +20,17 @@ import type { NextConfig } from 'next';
  * production. Com os dois diretórios separados por essa chave, as duas coisas
  * passam a poder rodar ao mesmo tempo sem se ver.
  */
+// Na Vercel o output tem de ser `.next` — a plataforma não reconhece outro
+// distDir. Localmente mantemos `.next-prod` para dev e build não se pisarem.
+const distDir =
+  process.env.NODE_ENV === 'development'
+    ? '.next'
+    : process.env.VERCEL
+      ? '.next'
+      : '.next-prod';
+
 const nextConfig: NextConfig = {
-  distDir: process.env.NODE_ENV === 'development' ? '.next' : '.next-prod',
+  distDir,
   reactStrictMode: true,
   // Há um lockfile em diretório ancestral; sem isto o Next infere a raiz errada.
   outputFileTracingRoot: path.resolve(process.cwd()),
