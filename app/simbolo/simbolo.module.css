@@ -1,0 +1,144 @@
+.root {
+  padding: calc(var(--header-height) + var(--space-xl)) var(--page-margin) var(--space-3xl);
+}
+
+.head {
+  max-inline-size: var(--measure);
+  margin-block-end: var(--space-2xl);
+}
+
+.head > * + * {
+  margin-block-start: var(--space-md);
+}
+
+.block {
+  padding-block-start: var(--space-xl);
+  border-block-start: 1px solid var(--line-soft);
+}
+
+.block + .block {
+  margin-block-start: var(--space-xl);
+}
+
+.h {
+  margin-block-end: var(--space-lg);
+  font-family: var(--font-brand);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.note {
+  max-inline-size: var(--measure);
+  margin-block-end: var(--space-lg);
+  font-size: var(--text-small);
+  color: var(--text-muted);
+}
+
+/* --- palco principal ----------------------------------------------------- */
+
+.stage {
+  display: grid;
+  place-items: center;
+  padding-block: var(--space-2xl);
+  background:
+    radial-gradient(120% 80% at 50% 30%, var(--navy-800) 0%, var(--navy-900) 70%), var(--navy-900);
+  border-radius: var(--radius-panel);
+}
+
+.big {
+  inline-size: min(60vh, 520px);
+}
+
+/* --- camadas isoladas ---------------------------------------------------- */
+
+.layers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-lg);
+}
+
+.layer {
+  margin: 0;
+}
+
+.layer figcaption {
+  margin-block-start: var(--space-2xs);
+  font-family: var(--font-brand);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.cell {
+  position: relative;
+  aspect-ratio: 1;
+  background-color: var(--navy-800);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+}
+
+.cell > svg {
+  position: absolute;
+  inset: 8%;
+  inline-size: 84%;
+  block-size: 84%;
+}
+
+/* isolamento de camada, para conferir cada contribuição */
+.onlyExtrude [data-layer='face'],
+.onlyExtrude [data-layer='grain'],
+.onlyExtrude [data-layer='edge'] {
+  display: none;
+}
+
+.onlyFace [data-layer='extrude'],
+.onlyFace [data-layer='grain'],
+.onlyFace [data-layer='edge'] {
+  display: none;
+}
+
+.onlyGrain [data-layer='extrude'],
+.onlyGrain [data-layer='edge'] {
+  display: none;
+}
+
+.onlyGrain [data-layer='grain'] {
+  mix-blend-mode: normal;
+  opacity: 1;
+}
+
+.onlyEdge [data-layer='extrude'],
+.onlyEdge [data-layer='face'],
+.onlyEdge [data-layer='grain'] {
+  display: none;
+}
+
+.onlyEdge [data-layer='edge'] {
+  opacity: 1;
+}
+
+/* --- escalas ------------------------------------------------------------- */
+
+.scales {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-xl);
+}
+
+.scaleItem {
+  margin: 0;
+}
+
+.scaleLabel {
+  display: block;
+  margin-block-start: var(--space-2xs);
+  font-family: var(--font-brand);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}

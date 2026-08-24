@@ -1,0 +1,206 @@
+/*
+ * Camada persistente do símbolo.
+ *
+ * Renderizada uma vez, fora de qualquer seção, e NUNCA remontada. `fixed` a
+ * torna imune a mudanças de layout das seções: não existe handoff entre
+ * elementos sticky, então a classe de bug mais comum desse tipo de efeito
+ * simplesmente não ocorre aqui.
+ */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-symbol);
+  pointer-events: none;
+
+  /* O palco não rola nem recebe evento; só hospeda as duas metades. */
+  overflow: hidden;
+}
+
+/*
+ * Cada metade é ancorada com o CENTRO na origem do palco (0,0).
+ *
+ * Assim a coreografia escreve a posição do centro direto, sem `-50%` no
+ * translate — o que importa porque `translate` em porcentagem se refere ao
+ * tamanho NÃO transformado, e misturar isso com `scale` faria a peça derivar
+ * conforme a escala mudasse.
+ */
+.half {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: var(--symbol-size);
+  block-size: var(--symbol-size);
+  margin-block-start: calc(var(--symbol-size) / -2);
+  margin-inline-start: calc(var(--symbol-size) / -2);
+  transform-origin: 50% 50%;
+
+  /*
+   * A pose inicial vem de PROPRIEDADES, não de um `transform` embutido.
+   *
+   * O componente escrevia `transform` direto no atributo `style`, e estilo
+   * embutido não é alcançável por media query: abaixo de 900px a peça era
+   * pintada na pose de desktop — 66,65vw, escala 1 — e pulava para o centro no
+   * primeiro quadro em que o JS assumia. Com a pose em propriedades, a media
+   * query lá embaixo troca os três números e o CSS já entrega a peça no lugar
+   * certo, antes de qualquer JavaScript.
+   *
+   * O escritor continua escrevendo `transform` embutido, que vence isto — como
+   * deve ser, já que a partir do primeiro quadro ele é a autoridade.
+   */
+  transform: translate3d(var(--sym-x), var(--sym-y), 0) scale(var(--sym-scale));
+  opacity: var(--sym-opacity, 1);
+
+  /*
+   * Promoção deliberada e contada: são exatamente dois elementos, e são os que
+   * animam durante a página inteira. O orçamento do plano (§13.3) permite até
+   * quatro.
+   */
+  will-change: transform;
+}
+
+.svg {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+/*
+ * Sombra de contato de cada metade, e o reflexo no chão.
+ *
+ * Sem `filter: blur()`: este elemento se move e escala junto com a peça, e blur
+ * em elemento transformado re-rasteriza a cada quadro. A suavidade vem das
+ * paradas do próprio gradiente, que custa zero.
+ *
+ * O reflexo mora no `::after` DESTE elemento, e não num nó irmão, por uma razão
+ * de arquitetura: a coreografia controla a opacidade das sombras por
+ * `[data-symbol-shadow]`, e um pseudo-elemento herda isso de graça. Um nó novo
+ * teria de entrar na consulta do escritor e virar mais um estado a manter.
+ */
+.shadow {
+  position: absolute;
+  inset-block-end: 1%;
+  block-size: 9%;
+  background: radial-gradient(
+    ellipse at center,
+    rgb(0 0 0 / 46%) 0%,
+    rgb(0 0 0 / 34%) 22%,
+    rgb(0 0 0 / 18%) 44%,
+    rgb(0 0 0 / 7%) 62%,
+    rgb(0 0 0 / 2%) 78%,
+    rgb(0 0 0 / 0%) 100%
+  );
+}
+
+/*
+ * Reflexo especular no chão.
+ *
+ * Na referência o chão é polido: sob a base de cada metade há um rastro claro
+ * que se alonga para baixo e desaparece em ~150px, chegando a 63 de luminância
+ * contra os ~25 do chão em volta. É o que faz a peça ler como APOIADA em algum
+ * lugar, em vez de recortada sobre um fundo.
+ */
+.shadow::after {
+  content: '';
+  position: absolute;
+  /*
+   * Começa onde a peça encosta, que no estado `hero` é exatamente o horizonte.
+   * Um gradiente radial ancorado no topo tem o valor máximo NA borda de cima,
+   * ou seja, sempre um degrau — então o degrau tem de cair onde já existe um.
+   * Começando acima do horizonte, ele aparecia como uma linha clara no meio da
+   * parede, a 78,5% da altura.
+   */
+  inset-inline: -14%;
+  inset-block-start: 108%;
+  block-size: 250%;
+  background: radial-gradient(
+    ellipse at center top,
+    rgb(206 224 242 / 19%) 0%,
+    rgb(150 186 220 / 8.5%) 32%,
+    rgb(108 152 196 / 3%) 60%,
+    rgb(0 0 0 / 0%) 82%
+  );
+}
+
+/* A crescente esquerda ocupa a metade esquerda do viewBox; a direita, a outra. */
+.half[data-symbol='left'] .shadow {
+  inset-inline: 0 52%;
+}
+
+.half[data-symbol='right'] .shadow {
+  inset-inline: 52% 0;
+}
+
+/*
+ * Sob `prefers-reduced-motion` a coreografia deixa de ser contínua e passa a
+ * assumir estados discretos (ver components/symbol/SymbolChoreography.tsx).
+ * A transição curta mantém a narrativa legível sem prender nada à rolagem.
+ */
+@media (width < 900px) {
+  /*
+   * Marca d'água atrás do conteúdo (§9.2). No mobile a coluna de texto ocupa a
+   * largura toda e passa por cima da peça; a plena opacidade o headline fica
+   * ilegível onde as duas se cruzam.
+   *
+   * A opacidade vai no PALCO, não nas metades: a coreografia escreve `opacity`
+   * em cada metade, e uma regra de CSS ali seria sobrescrita pelo estilo inline
+   * do escritor no primeiro quadro.
+   *
+   * Escala e centralização do §9.2 entraram na Fase 11: a peça fica CENTRADA
+   * e maior, e percorre duas poses em vez de dez. Os números vivem em
+   * lib/symbol/states.ts (MOBILE_STATES), como todos os outros da coreografia;
+   * a pose inicial chega até aqui pela media query que SymbolStage emite.
+   */
+  .stage {
+    opacity: 0.28;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .half {
+    transition:
+      transform 300ms ease,
+      opacity 300ms ease;
+    will-change: auto;
+  }
+}
+
+/*
+ * Envelope de entrada do símbolo (§9.2: escala 0,96 → 1 + fade, 900ms,
+ * power3.out).
+ *
+ * Existe como nó separado por uma razão de arquitetura, não de conveniência: a
+ * entrada precisa animar a peça sem que nada além da coreografia escreva nas
+ * metades. Aqui a transformação é do CONJUNTO, e as duas metades continuam
+ * tendo um escritor só.
+ *
+ * A origem é o centro do símbolo no estado `hero` (66,65% / 53,2%, os mesmos
+ * números de lib/symbol/states.ts), não o centro da tela — escalar em torno do
+ * centro da viewport arrastaria a peça na diagonal enquanto cresce.
+ */
+.entry {
+  position: absolute;
+  inset: 0;
+  transform-origin: 66.65% 53.2%;
+  animation: symbol-in var(--dur-long) var(--ease-emphasis) both;
+}
+
+@keyframes symbol-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entry {
+    animation: none;
+  }
+}

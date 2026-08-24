@@ -1,0 +1,64 @@
+/*
+ * Relevo sintético do símbolo.
+ *
+ * Todas as camadas são pintura estática — nenhum filtro SVG, que re-rasterizaria
+ * a cada mudança de escala. Só `transform` e `opacity` serão animados.
+ */
+
+.mark {
+  position: relative;
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+
+.half {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+/*
+ * As camadas 1 (banda de extrusão) e 2 (face) recebem `fill` por ATRIBUTO, não
+ * por CSS: cada metade referencia o gradiente ancorado na caixa dela, então o id
+ * varia por lado. CSS aqui sobrescreveria o atributo e as duas metades
+ * acabariam com a mesma âncora.
+ */
+
+/* 3. grão do material */
+.grain {
+  fill: url('#navite-grain');
+  mix-blend-mode: multiply;
+  opacity: 0.65;
+}
+
+/* 4. highlight de aresta — a cor do traço vem do gradiente, por atributo */
+.edge {
+  fill: none;
+  stroke-width: 2.6;
+  opacity: 0.72;
+}
+
+/*
+ * Sombra de contato.
+ *
+ * Sem `filter: blur()` de propósito: a partir da Fase 4 este elemento se move e
+ * escala junto com o símbolo, e blur em elemento transformado re-rasteriza a
+ * cada frame. A suavidade vem das paradas do próprio gradiente, que custa zero.
+ */
+.shadow {
+  position: absolute;
+  inset-inline: 4%;
+  inset-block-end: -3%;
+  block-size: 12%;
+  background: radial-gradient(
+    ellipse at center,
+    rgb(0 0 0 / 46%) 0%,
+    rgb(0 0 0 / 34%) 22%,
+    rgb(0 0 0 / 18%) 44%,
+    rgb(0 0 0 / 7%) 62%,
+    rgb(0 0 0 / 2%) 78%,
+    rgb(0 0 0 / 0%) 100%
+  );
+}

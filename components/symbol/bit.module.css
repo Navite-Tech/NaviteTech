@@ -1,0 +1,136 @@
+/*
+ * O Bit — geometria e comportamento.
+ *
+ * TAMANHO. O vão do `( )` fechado é um círculo de diâmetro 0,628 do lado do
+ * símbolo, e o símbolo fecha em escala 0,80 (lib/symbol/states.ts, `ctaClosed`).
+ * O diâmetro interno é, portanto, `0,502 x --symbol-size`. O briefing pede 12 a
+ * 18% dele: 18% dá `0,0904 x --symbol-size`, ou 43px numa janela de 1440x900.
+ * O glifo tem 11 células de largura, então cada cubo do Bit mede 3,9px — a
+ * mesma escala de pixel da referência.
+ *
+ * O TOPO da faixa, e não o meio dela: abaixo de 15% os dois arcos deixam de ler
+ * como olhos e viram um tracejado decorativo acima do título. O que precisa
+ * sobreviver à discrição não é o tamanho — é a forma.
+ *
+ * POSIÇÃO. Centrado na horizontal com o símbolo (50vw) e a 0,82 do raio do vão
+ * ACIMA do centro dele: `0,251 x 0,82 = 0,206`. É a faixa vazia entre a borda
+ * de cima do vão e a primeira linha do headline. Ver a nota longa em
+ * BitEyes.tsx.
+ *
+ * ENTRADA. Só no fechamento, e só depois de as metades praticamente se
+ * encaixarem: `ctaEncaixe` acontece em 0,82 do curso do Contato, e o Bit começa
+ * a aparecer em 0,88. Antes disso não há vão nenhum para ele habitar — as duas
+ * crescentes ainda estão separadas.
+ */
+
+.bit {
+  --bit-size: calc(0.0904 * var(--symbol-size));
+  --e: clamp(0, calc((var(--reveal, 0) - 0.88) * 8), 1);
+
+  /*
+   * `fixed`, e não `absolute` — o Bit precisa estar no MESMO quadro de
+   * referência do símbolo.
+   *
+   * A camada do `( )` é fixa: as duas metades são escritas em coordenadas de
+   * janela. O Bit mora dentro da seção, para herdar o `--reveal` que diz quando
+   * as metades se encaixaram, mas se resolvesse contra a tela presa da seção
+   * ele andaria com ela. Medido: no fim do documento a tela presa sobe a altura
+   * do rodapé — 226px — e os olhos iam parar no topo da janela, longe do vão.
+   *
+   * Fixo dentro da seção, ele herda a propriedade e ignora o deslocamento.
+   * Nenhum ancestral tem `transform`, que é o que tornaria `fixed` relativo a
+   * outra coisa.
+   */
+  position: fixed;
+  inset-block-start: calc(39.5vh - 0.206 * var(--symbol-size));
+  inset-inline-start: 50%;
+  z-index: var(--z-content);
+  inline-size: var(--bit-size);
+  translate: calc(-50% + var(--bx, 0px)) calc(-50% + var(--by, 0px));
+  opacity: var(--e);
+  pointer-events: none;
+}
+
+.olhos {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  fill: var(--bone);
+
+  /*
+   * O glifo é PIXEL, e pixel não tem antialias.
+   *
+   * Com as células em 3,9px o rasterizador espalha cada quadrado por duas
+   * colunas de tela, e os dez cubos viram dez borrões — a escada desaparece
+   * justamente na escala em que ela é a única coisa que existe. `crispedges`
+   * faz cada célula ocupar pixels inteiros.
+   */
+  shape-rendering: crispedges;
+
+  /*
+   * O PISCAR.
+   *
+   * Um ciclo de 11s com DOIS piscares, em 40% e 78% — intervalos de 4,2s e
+   * 6,8s. Um piscar periódico soa a mecanismo; dois em tempos diferentes dentro
+   * do mesmo ciclo já lê como involuntário, que é o efeito procurado.
+   *
+   * Os dois olhos piscam JUNTOS, e isso não é economia: um olho de cada vez é
+   * uma piscadela, e piscadela é personagem.
+   *
+   * `scale` no eixo Y só — a escada colapsa numa linha e volta. 120ms fechando,
+   * o mesmo tempo de um piscar humano.
+   */
+  animation: bit-piscar 11s var(--ease-in-out) 2.5s infinite;
+  transform-origin: center;
+}
+
+@keyframes bit-piscar {
+  0%,
+  39.4%,
+  41.4%,
+  77.4%,
+  79.4%,
+  100% {
+    scale: 1 1;
+  }
+
+  40.2%,
+  78.2% {
+    scale: 1 0.12;
+  }
+}
+
+/*
+ * Abaixo de 900px o Bit não aparece, e a ausência é de composição.
+ *
+ * Ali o `( )` não se reconstitui no centro da tela: ele é marca d'água a 28% de
+ * opacidade atrás do formulário (§9.2). Não existe vão para habitar — existe uma
+ * peça esmaecida por trás de texto —, e olhos pousados sobre um campo de
+ * formulário não seriam um easter egg, seriam um estorvo.
+ */
+@media (width < 900px) {
+  .bit {
+    display: none;
+  }
+}
+
+/*
+ * Janela larga e baixa: o `( )` fecha em 50vh em vez de 39,5 (lib/symbol/states.ts,
+ * `CTA_BAIXA`). O Bit acompanha, pela mesma conta.
+ */
+@media (width >= 900px) and (height < 880px) {
+  .bit {
+    inset-block-start: calc(50vh - 0.206 * var(--symbol-size));
+  }
+}
+
+/*
+ * Movimento reduzido: os olhos ficam, o comportamento sai. Sem piscar e sem
+ * seguir o cursor — o ouvinte de ponteiro nem chega a ser instalado
+ * (BitEyes.tsx). A presença da marca não depende de movimento.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .olhos {
+    animation: none;
+  }
+}
