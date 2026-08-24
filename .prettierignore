@@ -1,0 +1,7 @@
+.next/
+.next-prod/
+out/
+node_modules/
+.shots/
+references/
+public/brand/*.svg
