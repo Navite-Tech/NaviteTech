@@ -1,0 +1,206 @@
+/*
+ * Anotações da seção Problema — callouts, linhas-guia e blueprints.
+ *
+ * A entrada de tudo aqui deriva de `--reveal`, que `ProblemMotion` escreve na
+ * seção uma vez por quadro. Nenhum destes elementos tem gatilho próprio: são
+ * quatro callouts, quatro linhas e dois retângulos, e dez observadores para o
+ * que uma propriedade herdada já resolve seria custo sem função.
+ *
+ * `--e` é a entrada do elemento: 0 antes da vez dele, 1 depois.
+ *
+ * A JANELA MUDOU NA FASE 14, e o motivo é o defeito mais caro desta seção.
+ *
+ * Ela ia de 0,85 a 1,00 do progresso, com 0,02 de escalonamento por irmão. Com
+ * a rampa de 12 (1/0,0833 de largura de fade), o quarto callout só chegava a
+ * opacidade plena em 0,9933 — e a seção descola em 1,0. Medido: os quatro
+ * ficavam legíveis ao mesmo tempo por 0,67% do curso, que numa tela de 941px
+ * são DEZ PIXELS de rolagem. O leitor via os rótulos piscarem, não os leu.
+ *
+ * Agora a janela abre em 0,56, escalona 0,03 por irmão e usa rampa 10: o quarto
+ * fecha a entrada em 0,75, e de 0,75 a 1,00 nada mais se move — o símbolo está
+ * parado (`lib/symbol/states.ts`), o enxame está posto (`lib/cubes/states.ts`) e
+ * o que resta é tempo de leitura. São 0,25 do curso, ~376px na mesma tela.
+ *
+ * O piso de 0,56 não é gosto: a lei 4 de `scripts/check-problema.mjs` exige que
+ * os callouts entrem DEPOIS de os três planos de cubos estarem cheios, e com o
+ * `disperso` ancorado em 0,72 isso acontece por volta de 0,45. A folga de 0,11
+ * vale mais de uma amostra do instrumento, que tira 24 ao longo do percurso.
+ */
+
+.callouts,
+.blueprints,
+.guias {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+/* --- retângulos de anotação ----------------------------------------------- */
+
+/*
+ * Pontilhados, não tracejados: é o que a ampliação da referência mostra.
+ * Entram um pouco antes dos callouts, para que a linha-guia chegue a um alvo
+ * que já existe.
+ */
+.blueprint {
+  --e: clamp(0, calc((var(--reveal, 0) - 0.5) * 8), 1);
+
+  position: absolute;
+  border: 1px dotted var(--brass);
+  opacity: calc(var(--e) * 0.34);
+}
+
+/* --- linhas-guia ---------------------------------------------------------- */
+
+/*
+ * `inline-size`/`block-size` explícitos, e isto NÃO é redundante com o
+ * `inset: 0` acima.
+ *
+ * Um `<svg>` com `viewBox` e sem dimensões é elemento SUBSTITUÍDO: tem razão de
+ * aspecto intrínseca. Com `inset: 0` e altura automática, a largura vem do bloco
+ * container, mas a ALTURA vem da razão — o `bottom` fica sobrerestrito e é
+ * ignorado. O viewBox aqui é 1000x1000, então a caixa saía 1672x1672 numa tela
+ * de 1672x941, e todo y era esticado por 1,78.
+ *
+ * Medido: as quatro guias caíam em y 335, 649, 1341 e 1333 enquanto os callouts
+ * a que elas apontam estavam em 162, 363, 729 e 749 — as duas de baixo saíam da
+ * tela e iam desenhar dentro da seção seguinte. Era assim desde a Fase 6; a
+ * captura de Serviços com movimento reduzido é que mostrou os dois fios
+ * perdidos.
+ */
+.guias {
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.linha {
+  --e: clamp(0, calc((var(--reveal, 0) - 0.56 - var(--i) * 0.03) * 10), 1);
+
+  fill: none;
+
+  /*
+   * Medida nas duas guias da referência que correm sobre fundo limpo: 76,0 e
+   * 75,1 de luminância sobre um fundo de 18,7 e 23,0, o que resolve como
+   * --bone-dim a 0,33. As outras duas passam por cima da crescente e não
+   * servem de amostra.
+   *
+   * --line-brass, que era o valor anterior, dá 20% de uma cor já mais escura:
+   * a guia simplesmente não aparecia.
+   */
+  stroke: rgb(195 186 173 / 33%);
+  stroke-width: 1;
+
+  /*
+   * Desenhada por dashoffset (§9.3); `pathLength="1"` tira o comprimento real
+   * da conta.
+   *
+   * SEM `vector-effect: non-scaling-stroke`, e a ausência é o conserto de um
+   * defeito que atravessou três fases sem ser visto.
+   *
+   * O SVG é esticado sobre a viewport com `preserveAspectRatio="none"`, então
+   * uma unidade em x e uma em y não medem o mesmo — é o que permite que as duas
+   * pontas de cada guia sejam porcentagem da mesma caixa. Com
+   * `non-scaling-stroke`, o traço passa a ser rasterizado em espaço de TELA
+   * enquanto o tracejado continua sendo medido em unidades do viewBox — e o
+   * traço de comprimento "1" que `pathLength` normaliza deixa de cobrir a
+   * linha inteira.
+   *
+   * Medido em A/B no mesmo build, injetando e retirando a propriedade na mesma
+   * janela: com ela, duas das quatro guias eram pintadas em 61% e 60% do
+   * comprimento — e pela ponta ERRADA, a colada ao enxame, deixando o trecho
+   * que encosta no callout em branco; uma terceira acendia 81 das 101 colunas.
+   * Sem ela, as quatro chegam de ponta a ponta.
+   *
+   * Nenhuma verificação pegava isso: `getBoundingClientRect` devolve a
+   * GEOMETRIA da linha, não o que foi pintado dela. A lei nova em
+   * `scripts/check-problema.mjs` mede tinta.
+   *
+   * O preço de tirar o `non-scaling-stroke` é que a espessura passa a seguir a
+   * escala do eixo: 0,94px num trecho horizontal e 1,67px num vertical, numa
+   * janela de 1672x941. As guias são horizontais com uma dobra curta, então a
+   * variação real fica entre 0,94 e ~1,2px.
+   */
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - var(--e));
+}
+
+/* --- callouts ------------------------------------------------------------- */
+
+.callout {
+  --e: clamp(0, calc((var(--reveal, 0) - 0.56 - var(--i) * 0.03) * 10), 1);
+
+  position: absolute;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  opacity: var(--e);
+}
+
+.esq {
+  max-inline-size: 12rem;
+}
+
+.dir {
+  max-inline-size: 9rem;
+}
+
+.marcador {
+  flex: none;
+  inline-size: 9px;
+  block-size: 9px;
+  margin-block-start: 0.3rem;
+  background-color: var(--sage);
+}
+
+.rotulo {
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--text);
+}
+
+/* --- responsivo ----------------------------------------------------------- */
+
+@media (width < 1280px) {
+  /*
+   * Tablet: dois callouts, não quatro (§9.3). Somem os de baixo, que é onde o
+   * enxame já está mais denso e onde a peça ocupa mais largura.
+   */
+  .callout:nth-child(n + 3),
+  .linha:nth-child(n + 3) {
+    display: none;
+  }
+}
+
+@media (width < 900px) {
+  /*
+   * Mobile: os quatro problemas viram lista tipográfica no fluxo da coluna
+   * (§9.3). É a MESMA `<ul>` do desktop — ela só deixa de ser posicionada.
+   */
+  .blueprints,
+  .guias {
+    display: none;
+  }
+
+  .callouts {
+    position: static;
+    display: grid;
+    gap: 0.55rem;
+    margin-block-start: var(--space-lg);
+  }
+
+  .callout,
+  .callout:nth-child(n + 3) {
+    position: static;
+    display: flex;
+    max-inline-size: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .linha {
+    stroke-dashoffset: 0;
+  }
+}

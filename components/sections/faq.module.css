@@ -1,0 +1,150 @@
+/*
+ * FAQ — a seção de desaceleração (§9.6).
+ *
+ * Limpa e tipográfica. Sem símbolo (a coreografia leva a peça a opacidade 0
+ * nesta faixa), sem cubos (o campo também sai), sem 3D, sem painel. Depois de
+ * três seções de composição, o alívio É o conteúdo.
+ *
+ * A entrada é a única coisa animada: uma linha por vez, 40ms de escalonamento
+ * (§9.6). Não há nada preso à rolagem aqui.
+ */
+
+.lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-inline-size: 40rem;
+}
+
+/*
+ * Divisória de 1px entre perguntas, e uma acima da primeira: a lista precisa de
+ * uma aresta superior para não flutuar ao lado do título.
+ */
+.item {
+  border-block-end: 1px solid var(--line-brass);
+  opacity: 0;
+  animation: faq-entra var(--dur-reveal) var(--ease-out) forwards;
+  animation-delay: calc(0.1s + var(--i) * 40ms);
+}
+
+.item:first-child {
+  border-block-start: 1px solid var(--line-brass);
+}
+
+.details {
+  /*
+   * Contém a transição do painel. Sem isto, uma resposta longa abrindo obriga
+   * o navegador a refazer o layout da seção inteira a cada quadro.
+   */
+  contain: layout;
+}
+
+/*
+ * O `<summary>`.
+ *
+ * `list-style: none` + `::-webkit-details-marker` para tirar o triângulo
+ * padrão: o `+` é o indicador, e dois indicadores seriam ruído. `display: flex`
+ * também remove o marcador nos navegadores atuais, mas as duas regras ficam
+ * porque a que basta varia entre eles.
+ */
+.pergunta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding-block: 1.35rem;
+  font-size: var(--text-lead);
+  line-height: 1.35;
+  letter-spacing: var(--tracking-snug);
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
+.pergunta::-webkit-details-marker {
+  display: none;
+}
+
+.pergunta:hover {
+  color: var(--bone-lit);
+}
+
+/*
+ * Foco visível no `<summary>` inteiro, com a folga do §14. O anel padrão do
+ * navegador contornaria só o texto em alguns casos; aqui a área clicável é a
+ * linha toda, e o anel tem de dizer isso.
+ */
+.pergunta:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+}
+
+.mais {
+  flex: none;
+  color: var(--brass);
+  transition: rotate var(--dur-short) var(--ease-out);
+}
+
+.details[open] .mais {
+  rotate: 45deg;
+}
+
+/*
+ * A abertura (§9.6: `grid-template-rows: 0fr → 1fr`, 260ms).
+ *
+ * É preciso um elemento cuja altura possa ser interpolada — `auto` não
+ * interpola, mas `0fr → 1fr` sim — e outro, dentro, que recorte o excedente
+ * enquanto a linha ainda não cresceu. Daí os dois `<div>`; nenhum deles carrega
+ * semântica, que está inteira no `<details>`.
+ */
+.painel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 260ms var(--ease-out);
+}
+
+.details[open] .painel {
+  grid-template-rows: 1fr;
+}
+
+.painelInterno {
+  overflow: hidden;
+}
+
+.resposta {
+  padding-block-end: 1.35rem;
+  max-inline-size: 34rem;
+  font-size: var(--text-small);
+  line-height: var(--leading-loose);
+  color: var(--text-muted);
+}
+
+.resposta + .resposta {
+  margin-block-start: 0.9rem;
+}
+
+@keyframes faq-entra {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* O conteúdo é o mesmo; só não chega em ondas e não cresce em rampa (§14). */
+  .item {
+    opacity: 1;
+    animation: none;
+  }
+
+  .painel,
+  .mais {
+    transition: none;
+  }
+}
