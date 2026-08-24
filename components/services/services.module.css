@@ -1,0 +1,612 @@
+/*
+ * Pilha de cards de Serviços.
+ *
+ * A MECÂNICA é a da Fase 7 e não mudou: sticky, ordem 01 → 04, o próximo
+ * espiando por baixo, o símbolo imóvel à esquerda, tudo derivado de `--reveal`
+ * sem um gatilho por card. `scripts/check-servicos.mjs` mede exatamente isso e
+ * continua sendo o gabarito.
+ *
+ * A COMPOSIÇÃO é da Fase 14, e é outra.
+ *
+ * Até aqui o card era uma MOLDURA: 1px de brass em volta, interior no fundo da
+ * página, coluna de texto de 13rem à esquerda e uma maquete de interface à
+ * direita, dentro da própria caixinha. A geometria vinha medida de
+ * `references/services-reference.png` — arquivo que já não existe no
+ * repositório, e cujas duas ferramentas de comparação (tools/measure-services e
+ * tools/compare-servicos) por isso não rodam mais.
+ *
+ * Agora o card é uma SUPERFÍCIE. A arte sangra pelos quatro lados, a tipografia
+ * mora sobre ela — título e numeral em cima, copy embaixo — e o meio fica vazio
+ * de propósito: é a imagem respirando. O fio de brass continua, bem mais
+ * discreto, porque é ele que dá ao card a qualidade de peça montada em vez de
+ * imagem colada.
+ *
+ * A COR é da Fase 15, e é a correção do erro da 14.
+ *
+ * A 14 duotonava as quatro artes para a paleta da página — sombra sempre
+ * navy-900, alta-luz sempre bone — e cobria a coluna de texto com 88 a 93% de
+ * véu. As imagens sobreviviam como textura e nada mais. Agora elas entram na
+ * cor de origem, e a página se adapta a elas em vez do contrário:
+ *
+ *   metade de cima   sem véu nenhum. A tipografia pousa na arte crua e a TINTA
+ *                    é que muda, por `data-polaridade` — navy sobre as duas
+ *                    artes claras, bone sobre as duas escuras;
+ *   faixa de baixo   um gradiente curto de navy, igual nas quatro. É o que
+ *                    permite que as pills sejam claras nas quatro sem depender
+ *                    da luminância da imagem por baixo.
+ *
+ * Gradiente, e não filtro: os cards animam translate e scale a cada quadro, e
+ * filtro em nó que anima força re-rasterização.
+ *
+ * A unidade entre os quatro cards vem da tipografia, do numeral, dos traços, do
+ * spacing, das pills, da borda e do motion. Nunca da cor da fotografia.
+ */
+
+/* --- o trilho ------------------------------------------------------------- */
+
+/*
+ * O trilho vai do topo do card até a BASE DA TELA, não até a base do card.
+ *
+ * É o que reconcilia o §10.2 ("o próximo espia 12 %") com a composição, onde o
+ * card da vez aparece inteiro, com a borda inferior fechada. O próximo repousa
+ * com o topo a 12% da própria altura do fim da tela.
+ *
+ * `overflow: hidden` recorta o que ainda não entrou — tanto o card 01 chegando
+ * pela direita quanto os que esperam por baixo.
+ */
+.trilho {
+  --card-topo: calc(var(--header-height) + var(--space-2xs));
+  --card-base: 10.52vh;
+  --card-h: calc(100dvh - var(--card-topo) - var(--card-base));
+  --trilho-h: calc(100dvh - var(--card-topo));
+
+  position: absolute;
+  inset-block-start: var(--card-topo);
+  inset-block-end: 0;
+  inset-inline-start: 57.78vw;
+  inset-inline-end: var(--page-margin);
+  overflow: hidden;
+}
+
+/* --- um card -------------------------------------------------------------- */
+
+/*
+ * Toda a posição sai de `--reveal`, que SectionProgress publica na seção. Nada
+ * aqui tem gatilho próprio: são quatro cards, e quatro observadores para o que
+ * uma propriedade herdada já resolve seria custo sem função.
+ *
+ * `--q` é a entrada do card (0 antes da vez dele, 1 assentado) e `--e` é a
+ * saída dele (que é a entrada do card seguinte). As janelas vêm de
+ * lib/motion/stack.ts, pelas propriedades que o componente injeta no trilho.
+ *
+ * O PADRÃO de `--reveal` é 0,3, e não 0: é o valor em que o card 01 está
+ * assentado. Enquanto o JS de rolagem não chega — ou se nunca chegar — a seção
+ * mostra a composição inteira, em vez de um painel vazio.
+ */
+.card {
+  --inicio: calc(var(--assentado) + (var(--i) - 1) * var(--passo));
+  --q: clamp(0, calc((var(--reveal, 0.3) - var(--inicio)) * var(--passo-inv)), 1);
+  --e: clamp(0, calc((var(--reveal, 0.3) - var(--inicio) - var(--passo)) * var(--passo-inv)), 1);
+
+  /*
+   * `--proximo` é o que faz a FILA existir.
+   *
+   * Sem ele os três cards que esperam repousam todos na mesma faixa espiada, e
+   * como o de cima é o de maior índice, a faixa mostra o numeral do card 04
+   * quando o 01 está posto. A antecipação apontaria para o serviço errado.
+   *
+   * Ele sobe cada card da base do trilho até a faixa espiada durante a troca
+   * ANTERIOR à dele — é, por construção, o `--q` do card que vem antes.
+   */
+  --proximo: clamp(
+    0,
+    calc((var(--reveal, 0.3) - var(--inicio) + var(--passo)) * var(--passo-inv)),
+    1
+  );
+  --espera: calc(var(--trilho-h) - var(--proximo) * var(--espia) * var(--card-h));
+
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: calc(var(--i) + 1);
+  block-size: var(--card-h);
+  border: 1px solid rgb(167 158 123 / 34%);
+  border-radius: var(--radius-panel);
+
+  /*
+   * OPACO, e a opacidade é estrutural, não decorativa: o card que chega tem de
+   * cobrir o anterior. A cor é a do fundo da página — a mesma sombra em que as
+   * quatro artes foram reveladas, então a junta entre imagem e card não aparece
+   * enquanto ela carrega.
+   */
+  background-color: var(--navy-900);
+  translate: 0 calc((1 - var(--q)) * var(--espera) + var(--e) * var(--saida-y) * var(--card-h));
+  scale: calc(1 - var(--e) * (1 - var(--saida-escala)));
+}
+
+/*
+ * A POLARIDADE DA ARTE — o que substituiu o duotone.
+ *
+ * Até a Fase 14 as quatro artes eram recoloridas para a mesma paleta, e por
+ * isso uma tinta só servia às quatro. Agora as imagens são as originais: duas
+ * nascem sobre campo claro e duas sobre preto. Quem se adapta é a TINTA.
+ *
+ * Vale para a faixa de cima — título, numeral, traços —, que pousa direto sobre
+ * a arte crua. A faixa de baixo tem véu próprio e é bone nas quatro.
+ *
+ * `--sage` é reapontado dentro dos cards claros, e não trocado no seletor do
+ * acento: `.u-editorial-accent` é utilitário global e lê o token. Sobre o campo
+ * branco da arte 01 o sage padrão mede 2,2:1; o rebaixado mede 5,4:1.
+ */
+.card[data-polaridade='clara'] {
+  --card-ink: var(--navy-900);
+  --tick-off: rgb(0 16 30 / 26%);
+  --tick-on: var(--navy-900);
+  --sage: var(--sage-deep);
+}
+
+.card[data-polaridade='escura'] {
+  --card-ink: var(--bone);
+  --tick-off: rgb(195 186 173 / 24%);
+  --tick-on: var(--brass);
+}
+
+/*
+ * O VÉU — UM SÓ, e só na faixa de baixo.
+ *
+ * A versão anterior tinha dois: um horizontal que segurava 88% de navy até um
+ * terço da largura, cobrindo a coluna inteira de texto, e outro de baixo para
+ * cima. Juntos apagavam a imagem — que é o defeito que esta fase corrige. Com
+ * as artes recoloridas para navy isso não aparecia; com as originais, aparece.
+ *
+ * Ficou o de baixo, encurtado. Ele existe para uma coisa só: dar às pills e à
+ * descrição uma superfície escura previsível, IGUAL nas quatro artes, para que
+ * as pills possam ser claras nas quatro. É o que dispensa qualquer véu na
+ * metade de cima — lá a tipografia resolve por polaridade.
+ *
+ * Integrado, cobre ~0,29 da área do card: 71% da imagem chega intacta à tela.
+ *
+ * Gradiente, e não filtro: os cards animam translate e scale a cada quadro, e
+ * filtro em nó que anima força re-rasterização.
+ *
+ * `z-index` explícito nos três irmãos porque o card é contexto de empilhamento
+ * (ele tem `translate`): a arte no fundo, o véu por cima dela, o texto acima de
+ * tudo. Sem os números, o ::before pintaria ANTES da arte.
+ */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: calc(var(--radius-panel) - 1px);
+  background: linear-gradient(
+    to top,
+    rgb(0 16 30 / 92%) 0%,
+    rgb(0 16 30 / 84%) 15%,
+    rgb(0 16 30 / 40%) 30%,
+    rgb(0 16 30 / 0%) 46%
+  );
+  pointer-events: none;
+}
+
+/*
+ * O card que sai é escurecido por um VÉU, não pela própria opacidade — e a
+ * diferença é de 6,7ms por quadro.
+ *
+ * Medido no mesmo servidor, mesma janela, quatro execuções cada, com o gesto de
+ * roda atravessando uma troca inteira de card:
+ *
+ *   opacidade no card              20,10ms
+ *   cards fora do documento        13,45ms   (a linha de base)
+ *   opacidade forçada em 1         13,06ms
+ *   véu chapado por cima           12,36ms
+ *
+ * A causa é a mesma do filtro na Fase 3 e do <use> na Fase 6: sem promoção a
+ * camada, mudar a opacidade de um elemento obriga o navegador a pintar a
+ * subárvore inteira num buffer separado a cada quadro. Promover resolveria, mas
+ * gastaria quatro camadas de composição, e o §13.3 conta camadas.
+ *
+ * `inset: -1px` cobre também a borda, que na versão com opacidade desbotava
+ * junto. `check:servicos` LÊ este pseudo-elemento: se o card voltar a usar
+ * opacidade, a lei 1 passa a medir 1,00 e aprova sem verificar.
+ */
+.card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: 3;
+  border-radius: calc(var(--radius-panel) + 1px);
+  background-color: var(--navy-900);
+  opacity: calc(var(--e) * (1 - var(--saida-opacidade)));
+  pointer-events: none;
+}
+
+/*
+ * O card 01 chega de LADO, não por baixo (§4.2: a metade direita sai pela
+ * direita e o card entra logo atrás). Os outros três sobem por baixo, que é a
+ * pilha do §10.2. A razão de serem dois movimentos está em lib/motion/stack.ts.
+ */
+.card:first-child {
+  --q: clamp(0, calc((var(--reveal, 0.3) - var(--entrada-de)) * var(--entrada-inv)), 1);
+
+  translate: calc((1 - var(--q)) * 106%) calc(var(--e) * var(--saida-y) * var(--card-h));
+}
+
+/*
+ * O card 02 sobe para a faixa espiada em compasso com a CHEGADA do 01, que tem
+ * janela própria por vir de lado. Sem isto ele apareceria 0,08 do curso antes,
+ * espiando de um quadro ainda vazio.
+ */
+.card:nth-child(2) {
+  --proximo: clamp(0, calc((var(--reveal, 0.3) - var(--entrada-de)) * var(--entrada-inv)), 1);
+}
+
+/* O último não tem sucessor: nada o cobre, então ele não recua. */
+.card:last-child {
+  --e: 0;
+}
+
+/* --- a arte --------------------------------------------------------------- */
+
+/*
+ * O slot do visual. Continua sendo `[data-visual]` e continua recebendo o que a
+ * prop mandar (§10.4) — o que mudou é que ele deixou de ser uma COLUNA do card
+ * para ser o card inteiro.
+ *
+ * A classe chamava-se `.arte` e o componente pedia `styles.visual`: não havia
+ * correspondência, então o slot ia para o DOM SEM ATRIBUTO DE CLASSE NENHUM.
+ * Sem `overflow: hidden` e sem raio, os cantos quadrados da imagem
+ * transbordavam a borda arredondada do card, e a ordem de pintura sobrevivia
+ * por acidente do algoritmo — um posicionado com `z-index: auto` pinta no passo
+ * 8, antes dos irmãos numerados do passo 9. Passou despercebido enquanto a arte
+ * era escura sobre um card escuro.
+ *
+ * O recorte mora aqui, e não no `.card`, por causa do véu de saída: ele é
+ * `inset: -1px` de propósito, para cobrir a borda também, e um `overflow:
+ * hidden` no card o cortaria justamente na borda que ele existe para cobrir.
+ */
+.visual {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: calc(var(--radius-panel) - 1px);
+}
+
+/* --- tipografia sobre a arte ---------------------------------------------- */
+
+/*
+ * DUAS FAIXAS AFASTADAS, e o meio é vazio.
+ *
+ * Era `grid-template-rows: auto 1fr auto` — três linhas para um grid que
+ * recebia QUATRO filhos diretos, porque `.topo` e `.base` existiam nesta folha
+ * e nenhum componente as usava. O miolo vazio saía por acidente do `1fr` cair
+ * no `<h3>`. Agora as duas faixas existem de verdade e o afastamento é dito.
+ *
+ * O vazio do meio é conteúdo: é a imagem respirando.
+ */
+.cardTexto {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  block-size: 100%;
+  padding: calc(0.055 * var(--card-h)) 2.4vw calc(0.058 * var(--card-h));
+}
+
+.topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+/*
+ * O título ocupa 62% da largura, no máximo.
+ *
+ * Não é medida de conforto de leitura — são três linhas curtas. É o que impede
+ * que "IA aplicada ao negócio" alcance o numeral: os dois dividem a mesma
+ * faixa, e o numeral tem prioridade de canto.
+ */
+.titulo {
+  max-inline-size: 62%;
+  font-size: clamp(1.35rem, 1.95vw, 2.15rem);
+  line-height: 1.22;
+  letter-spacing: var(--tracking-snug);
+  font-weight: var(--weight-medium);
+  color: var(--card-ink, var(--text));
+}
+
+.tituloLinha {
+  display: block;
+}
+
+/*
+ * O numeral e os traços de progresso, empilhados no canto.
+ *
+ * Na Fase 7 eles ficavam lado a lado na base do numeral, porque o numeral abria
+ * o card à esquerda. No canto superior direito a leitura é vertical: o número,
+ * e sob ele quantos serviços já passaram.
+ */
+.numeral {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.85rem;
+  font-size: clamp(2.5rem, 4vw, 4.25rem);
+  color: var(--card-ink, var(--text));
+}
+
+.ticks {
+  display: inline-flex;
+  gap: 7px;
+}
+
+.tick {
+  display: block;
+  inline-size: 14px;
+  block-size: 4px;
+
+  /* medido: pico L=52..56, que resolve como bone-dim a ~24% sobre o navy */
+  background-color: var(--tick-off, rgb(195 186 173 / 24%));
+}
+
+/*
+ * O traço ativo é brass sobre arte escura e navy sobre arte clara: brass mede
+ * 1,6:1 contra o campo branco da arte 01, e ali o indicador não existiria.
+ */
+.tick[data-ativo] {
+  background-color: var(--tick-on, var(--brass));
+}
+
+/* A copy da base: proposta de valor e capacidades, sobre o véu. */
+.base {
+  position: relative;
+}
+
+.descricao {
+  max-inline-size: 25rem;
+  font-size: clamp(0.9rem, 1.02vw, 1rem);
+  line-height: 1.72;
+  color: var(--text);
+}
+
+/*
+ * AS CAPACIDADES SÃO PILLS — o tratamento da referência Wonder.
+ *
+ * Eram uma lista vertical em brass, com uma régua sage por cima. Numa moldura
+ * escura aquilo funcionava; sobre fotografia, texto solto em brass lê como
+ * legenda perdida. A pill devolve a cada item a qualidade de OBJETO, e é ela
+ * que dá peso à faixa de baixo do card.
+ *
+ * Claras nas quatro artes, sem exceção — é o que dá unidade a quatro imagens
+ * que não compartilham paleta nenhuma. Elas PODEM ser claras nas quatro porque
+ * pousam sobre o véu, que torna aquela faixa escura mesmo nos dois cards de
+ * arte clara. Sem o véu, cada polaridade precisaria da sua pill, e o sistema
+ * deixaria de ser um.
+ *
+ * A régua saiu junto: as pills já são o gesto que separava a copy do rodapé.
+ */
+.capacidades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-start: calc(0.042 * var(--card-h));
+}
+
+.capacidades li {
+  padding: 0.48rem 1.05rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--bone);
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-snug);
+  color: var(--navy-900);
+}
+
+/* --- o rótulo do próximo -------------------------------------------------- */
+
+/*
+ * Vive na mesma faixa que o card espiando, e é o par dele: o numeral do próximo
+ * aparece à esquerda, o rótulo à direita. Medido em y 92,24..95,43vh, com a
+ * primeira linha em bone e a segunda em brass.
+ *
+ * Some junto com a última troca: depois do card 04 não há próximo.
+ */
+.proximo {
+  --e: clamp(0, calc((var(--reveal, 0.3) - var(--ultimo-de)) * var(--passo-inv)), 1);
+
+  /* entra com o card 01: antes dele não há "próximo" a anunciar */
+  --entra: clamp(0, calc((var(--reveal, 0.3) - var(--entrada-de)) * var(--entrada-inv)), 1);
+
+  position: absolute;
+  inset-block-end: 4.57vh;
+  inset-inline-end: 16.7%;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  opacity: calc(var(--entra) * (1 - var(--e)));
+  pointer-events: none;
+}
+
+/*
+ * O rótulo tem BASE PRÓPRIA, e é a única exceção à regra de não velar a metade
+ * de cima de um card.
+ *
+ * Ele pousa na faixa espiada, que é o topo do PRÓXIMO card — e o topo do card,
+ * por construção desta fase, não tem véu nenhum. Sobre as artes escuras isso
+ * não é problema. Sobre a arte 02, que é brass claro de ponta a ponta, bone e
+ * brass simplesmente desaparecem: medido no primeiro corte, o rótulo sumia
+ * inteiro no repouso do card 01.
+ *
+ * É uma elipse macia, do tamanho do próprio rótulo — cobre menos de 2% da área
+ * do card espiado e morre antes de encostar na borda.
+ */
+.proximo::before {
+  content: '';
+  position: absolute;
+  inset: -0.9rem -1.7rem;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgb(0 16 30 / 84%), rgb(0 16 30 / 0%));
+}
+
+/*
+ * Seta para baixo: um fio que ganha corpo e uma ponta de duas bordas. Medida na
+ * referência em 18x28px. Não é glifo porque a ponta precisa ser fina como o
+ * fio — uma seta tipográfica traria o peso da fonte junto.
+ */
+.proximoSeta {
+  position: relative;
+  display: block;
+  inline-size: 18px;
+  block-size: 28px;
+}
+
+.proximoSeta::before {
+  content: '';
+  position: absolute;
+  inset-block: 0 4px;
+  inset-inline-start: 50%;
+  inline-size: 1px;
+  background: linear-gradient(to bottom, rgb(167 158 123 / 20%), var(--brass));
+}
+
+.proximoSeta::after {
+  content: '';
+  position: absolute;
+  inset-block-end: 2px;
+  inset-inline-start: 50%;
+  inline-size: 7px;
+  block-size: 7px;
+  border-block-end: 1px solid var(--brass);
+  border-inline-end: 1px solid var(--brass);
+  rotate: 45deg;
+  translate: -50% 0;
+}
+
+.proximoRotulo {
+  font-family: var(--font-brand);
+  font-size: var(--text-micro);
+  line-height: 1.65;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.proximoRotulo span {
+  display: block;
+  color: var(--brass);
+}
+
+/* --- lista: mobile e movimento reduzido ----------------------------------- */
+
+/*
+ * Uma regra só, duas situações (§10.5 e §14): abaixo de 900px nada fica preso,
+ * e com movimento reduzido a pilha não pode existir, porque ali `--reveal` vale
+ * 1 e só o último card estaria assentado. Nos dois casos os quatro viram lista
+ * vertical em fluxo normal.
+ *
+ * A COMPOSIÇÃO NÃO MUDA, e isso é novo. Até a Fase 13 o mobile desmontava o
+ * card: a maquete subia com razão de aspecto própria, o texto descia, e o
+ * resultado era outro objeto. Com a arte ocupando o card inteiro, a mesma
+ * composição serve nas duas larguras; o que muda é a altura, que passa a ser
+ * uma medida em vez da tela.
+ */
+@media (width < 900px), (prefers-reduced-motion: reduce) {
+  .trilho {
+    /*
+     * `--card-h` continua definido, e continua sendo o que dá escala às folgas
+     * internas do card. Em fluxo ele não pode mais vir da tela: numa lista,
+     * quatro cards de 100dvh seriam quatro telas de rolagem cada um.
+     */
+    --card-h: 30rem;
+
+    position: static;
+    display: grid;
+    gap: var(--space-lg);
+
+    /*
+     * A lista tem MEDIDA, e não a largura da página. No mobile isso não muda
+     * nada — a coluna já é estreita. Mas o movimento reduzido usa esta mesma
+     * regra numa tela larga, e ali um card de 1470px de largura viraria cartaz.
+     */
+    max-inline-size: 34rem;
+    overflow: visible;
+  }
+
+  /*
+   * O `:first-child` precisa aparecer aqui explicitamente: media query não soma
+   * especificidade, e a regra da entrada lateral tem uma classe a mais. Sem
+   * isto o card 01 continuava 106% à direita no mobile e o documento inteiro
+   * ficava 731px de largura numa tela de 390.
+   */
+  /*
+   * `relative`, e NÃO `static` — a mesma armadilha que o trilho do Processo já
+   * registrou para o marcador dos nós.
+   *
+   * A arte é `position: absolute; inset: 0` e resolve contra o ancestral
+   * POSICIONADO mais próximo. Com o card em fluxo estático, esse ancestral
+   * deixa de ser o card e passa a ser a tela presa da seção: medido a 390x844,
+   * a arte do card 04 cobria a seção inteira, em escala de página, e os quatro
+   * cards ficavam ilegíveis por baixo dela.
+   *
+   * `relative` sem deslocamento não muda o fluxo em nada — só devolve ao card a
+   * posse do próprio conteúdo absoluto.
+   */
+  .card,
+  .card:first-child {
+    position: relative;
+
+    /*
+     * MÍNIMO, não altura fixa: o card 04 tem cinco capacidades contra as quatro
+     * dos outros, e a 320px de largura a descrição dele ocupa quatro linhas. Com
+     * altura fixa a lista saía por baixo da borda.
+     */
+    min-block-size: var(--card-h);
+    translate: none;
+    scale: none;
+  }
+
+  .card::after {
+    display: none;
+  }
+
+  /*
+   * O véu sobe um pouco: numa coluna estreita a descrição quebra em mais linhas
+   * e as pills passam a ocupar duas fileiras, então a faixa de baixo é mais
+   * alta. Continua sendo UM gradiente, e continua sem tocar a metade de cima.
+   */
+  .card::before {
+    background: linear-gradient(
+      to top,
+      rgb(0 16 30 / 94%) 0%,
+      rgb(0 16 30 / 84%) 24%,
+      rgb(0 16 30 / 38%) 46%,
+      rgb(0 16 30 / 0%) 62%
+    );
+  }
+
+  .cardTexto {
+    padding: var(--space-lg) var(--space-md);
+  }
+
+  .titulo {
+    max-inline-size: 68%;
+  }
+
+  .descricao {
+    max-inline-size: none;
+  }
+
+  .capacidades {
+    margin-block-start: var(--space-md);
+  }
+
+  .proximo {
+    display: none;
+  }
+}

@@ -1,0 +1,21 @@
+/*
+ * A arte dos cards de Serviços.
+ *
+ * Restou uma regra só. Até a Fase 13 este arquivo desenhava quatro maquetes de
+ * interface em `cqw`/`cqh` — navegadores, gráficos de barra, escadas de nós,
+ * estágios de agente — dentro de uma coluna com `container-type: size`. Elas
+ * saíram inteiras: a direção nova põe a imagem no lugar do card, não dentro
+ * dele, e o que sobra para o CSS é dizer como ela preenche.
+ *
+ * `object-position` vem de `--arte-pos`, publicado pelo card a partir de
+ * `Service.enquadramento` — não é um número fixo aqui.
+ *
+ * O crop 3:4 é assado em tools/build-service-art.cjs, mas o card mede de 0,73 a
+ * 0,81 conforme o viewport: sempre sobra imagem em um dos eixos, e QUAL borda
+ * cede é decisão de composição, diferente em cada arte. Um valor só na folha
+ * serviria a uma delas e trairia as outras três.
+ */
+.arte {
+  object-fit: cover;
+  object-position: var(--arte-pos, 50% 50%);
+}
