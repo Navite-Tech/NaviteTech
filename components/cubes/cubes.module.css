@@ -1,0 +1,271 @@
+/*
+ * Campo de cubos. Geometria e materiais medidos em
+ * problem-section-reference.png — ver tools/build-cubes.cjs.
+ *
+ * O CUBO É DESENHADO EM CSS, NÃO EM SVG — e isto contraria o §9.3 do plano, que
+ * pedia "um cubo isométrico de 3 faces desenhado uma vez em <defs> e
+ * instanciado via <use>".
+ *
+ * A razão é medida. Com 85 instâncias de <use> referenciando gradientes como
+ * paint server, o quadro custava 19,7ms durante o nascimento; trocando as
+ * mesmas unidades por divs de cor chapada, 11,0ms — mesmo servidor, mesma
+ * janela, três execuções cada. Os 8,7ms de diferença são rasterização de SVG, e
+ * o nascimento re-rasteriza tudo a cada quadro porque escalar uma camada
+ * invalida a textura dela. É a mesma lição do filtro na Fase 3.
+ *
+ * As três faces continuam existindo, agora como um gradiente de fundo e dois
+ * pseudo-elementos recortados: nenhum nó a mais no DOM, nenhum paint server, e
+ * o recorte é estático.
+ */
+
+/*
+ * A camada persistente do campo — irmã de <main>, como a do símbolo.
+ *
+ * `fixed` a torna imune ao layout das seções: o enxame do Problema e os quatro
+ * clusters do Processo são os MESMOS 168 nós, e entre uma coisa e outra passam
+ * três seções. Preso ao fundo de uma delas, o campo saía de cena junto — e
+ * reencontrá-lo depois seria montar um segundo enxame.
+ *
+ * `--z-bg` o põe abaixo do símbolo e do conteúdo, e depois do Environment por
+ * ordem de DOM: os cards de Serviços continuam passando por cima, e os
+ * marcadores de ambientação de cada seção também.
+ */
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bg);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.field {
+  position: absolute;
+  inset: 0;
+}
+
+/*
+ * Um plano de profundidade.
+ *
+ * A escala é o NASCIMENTO inteiro: com a origem no centro do vão, escalar o
+ * grupo de 0 a 1 afasta cada cubo na proporção da própria distância e o faz
+ * crescer junto — que é literalmente o que o §9.3 descreve, por três
+ * transformações em vez de 168.
+ *
+ * `--t` e `--py` são escritos por SectionProgress.tsx; a origem vem de
+ * lib/content/cube-field.ts.
+ */
+.plane {
+  position: absolute;
+  inset: 0;
+  transform: translate3d(0, var(--py, 0px), 0) scale(var(--t, 0));
+
+  /*
+   * A presença deste plano — e ela é o CAMPO INTEIRO da dissolução.
+   *
+   * `--f` já chega multiplicado pelo escritor: é a presença da jornada
+   * (`fade`) vezes o que sobrou da janela de dissolução deste plano
+   * (`lib/content/cube-field.ts`). Os três planos saem escalonados, o distante
+   * primeiro, na mesma ordem em que nasceram.
+   *
+   * Aplicada NO PLANO e não no palco: o `translate3d` acima já promove cada
+   * plano a camada de composição, e opacidade numa camada promovida é trabalho
+   * do compositor — não repinta nada. No palco, que não é promovido, seria
+   * repintura de tela cheia por quadro. É a mesma lição do véu dos cards na
+   * Fase 8, e é o que torna a dissolução de 168 unidades barata: três
+   * opacidades de compositor, e nenhuma unidade tocada.
+   */
+  opacity: var(--f, 1);
+}
+
+/*
+ * SEM `will-change` aqui, e a ausência é deliberada.
+ *
+ * O componente translate3d da transformação acima já promove cada plano a
+ * camada de composição. E o §13.3 conta camadas: as duas metades do símbolo já
+ * declaram `will-change`, e mais três declarações levariam a cinco, acima do
+ * teto de quatro.
+ *
+ * A promoção dos três planos continua existindo, mas ela ECONOMIZA: sem os
+ * grupos, o navegador teria de lidar com 168 nós transformando por conta
+ * própria. Três camadas para 168 cubos é o oposto de promoção gratuita.
+ */
+
+/* --- unidades ------------------------------------------------------------- */
+
+/*
+ * UMA UNIDADE — e, depois da Fase 15, é só isto.
+ *
+ * Aqui moravam `--q`, `--cl`, `--celula-n`, `--dx` e `--dy`: cinco expressões
+ * em `calc`, avaliadas por 168 elementos a cada quadro, que reconstruíam o
+ * destino de cada unidade dentro de uma das quatro retículas e o fator de
+ * escala para chegar lá. Era o preço da convergência.
+ *
+ * A dissolução não cobra esse preço. O cubo não vai a lugar nenhum: ele fica
+ * onde nasceu, e o plano que o contém é que perde presença. O que sobrou é a
+ * posição — onde está e quanto mede — e nada sobre para onde iria.
+ */
+.cube,
+.speck {
+  position: absolute;
+  inset-block-start: var(--y);
+  inset-inline-start: var(--x);
+  inline-size: var(--s);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+}
+
+/*
+ * O cubo de três faces.
+ *
+ * Profundidade de 12% da caixa, para cima e para a esquerda: é o que a
+ * ampliação de unidades de 25 a 31px mostra — face frontal dominante, fio claro
+ * no topo atravessando a largura toda, faixa escura à esquerda. A orientação é
+ * a mesma em todo o campo, inclusive à esquerda e à direita do centro do
+ * enxame; foi verificado antes de decidir por um desenho só.
+ *
+ * A frente é o fundo do próprio elemento, encostado no canto inferior-direito.
+ */
+.cube {
+  background: var(--cube-face) no-repeat 100% 100% / 88% 88%;
+}
+
+.cube::before,
+.cube::after {
+  content: '';
+  position: absolute;
+}
+
+/* face superior — paralelogramo com a aresta de trás deslocada para a esquerda */
+.cube::before {
+  inset: 0 0 88% 0;
+  background-color: var(--cube-top);
+  clip-path: polygon(0 0, 88% 0, 100% 100%, 12% 100%);
+}
+
+/* face lateral esquerda */
+.cube::after {
+  inset: 0 88% 0 0;
+  background-color: var(--cube-side);
+  clip-path: polygon(0 0, 100% 12%, 100% 100%, 0 88%);
+}
+
+/*
+ * Plano distante: quadrado chapado, sem as três faces.
+ *
+ * O §9.3 pedia blur(1.5px) para empurrá-lo para trás. Filtro está proibido em
+ * nó que a rolagem transforma (§13.3) — e a 3 ou 4px de lado as três faces não
+ * se distinguem de qualquer maneira. A profundidade vem da forma simplificada e
+ * da opacidade.
+ */
+.speck {
+  background-color: var(--cube-flat);
+  opacity: 0.72;
+}
+
+/* --- materiais ------------------------------------------------------------ */
+
+/*
+ * Medidos por pico de luminância em unidades de 22 a 31px: bone frente ~#999692
+ * e fio ~#a4a3a1; sage frente ~#818879 e lateral ~#3c423a; navy frente ~#35424b
+ * com o topo polido em ~#58626a.
+ */
+.bone {
+  --cube-face: linear-gradient(166deg, #efeade 0%, #d8d2c6 42%, #a9a49a 100%);
+  --cube-top: #f4f0e6;
+  --cube-side: #8a857b;
+  --cube-flat: #cdc7ba;
+}
+
+.sage {
+  --cube-face: linear-gradient(166deg, #b3b99e 0%, #8e9578 42%, #6b7160 100%);
+  --cube-top: #bcc2a6;
+  --cube-side: #585d4a;
+  --cube-flat: #99a084;
+}
+
+.navy {
+  --cube-face: linear-gradient(166deg, #3d5162 0%, #2a3d4e 42%, #1b2a36 100%);
+  --cube-top: #7d8b96;
+  --cube-side: #18242f;
+  --cube-flat: #46586a;
+}
+
+@media (width < 900px) {
+  /*
+   * Marca d'água, e não campo — a mesma decisão que o palco do símbolo já
+   * carrega abaixo de 900px, pelo mesmo motivo: ali a coluna de texto ocupa a
+   * largura toda e passa por cima do campo, e a plena opacidade uma unidade de
+   * 14px sobre uma linha de corpo a deixa ilegível.
+   */
+  .field {
+    opacity: 0.4;
+  }
+
+  /*
+   * Mobile: o §9.3 pede ~10 cubos estáticos atrás do texto, não o campo
+   * inteiro. Somem os dois planos de fundo, e do plano próximo fica um a cada
+   * quatro — o campo RALA, como a ambientação do hero. São 8 unidades, dentro
+   * da faixa de 8 a 10 do §12; com um a cada três eram 11, e as duas a mais
+   * caíam justamente sobre linhas de corpo do Processo.
+   *
+   * Sem isso, os 168 se espalhavam numa coluna alta e estreita: `--x` é vw e
+   * `--y` é vh, e numa janela de 390x844 as duas escalas divergem demais para o
+   * enxame continuar sendo um enxame.
+   */
+  .field [data-plane='far'],
+  .field [data-plane='mid'] {
+    display: none;
+  }
+
+  .field [data-plane='near'] > *:not(:nth-child(4n + 1)) {
+    display: none;
+  }
+}
+
+/*
+ * Tablet (900–1279): DOIS planos enquanto o campo está disperso, três quando
+ * ele se organiza.
+ *
+ * O motivo de tirar o `far` sempre foi VISUAL, não de custo: são 83 unidades de
+ * 4 a 8px que dão profundidade a um enxame visto numa tela larga e que, numa de
+ * 1024, viram granulação sobre o texto. O §12 escreve "20 cubos" nessa casa;
+ * ficar com `mid` e `near` — 85 de 168, 51% — é o desvio deliberado que
+ * preserva a proporção que o plano pediu sem desfazer a convergência.
+ *
+ * A Fase 14 abriu uma exceção a isso: no Processo, agrupado, o campo perdia a
+ * profundidade de propósito e as 83 unidades do `far` deixavam de ser
+ * granulação para virar metade das células de cada retícula — sem elas os
+ * clusters apareciam esburacados a 1024. A presença do plano virou então uma
+ * função de `--c`.
+ *
+ * A exceção morreu com os clusters. Não há mais retícula a preencher, e no
+ * Processo o campo agora SAI: um plano que reaparecesse para se dissolver logo
+ * em seguida seria movimento sem afirmação. Volta a valer a regra simples —
+ * dois planos no tablet, os mesmos 85 de 168.
+ *
+ * `opacity: 0` e não `display: none`: `check:responsivo` conta um plano como
+ * presente quando ele está no layout E tem tinta, e a contagem de DOIS planos
+ * nesta faixa é lei desde a Fase 12.
+ */
+@media (900px <= width < 1280px) {
+  .field [data-plane='far'] {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * Posto, não nascendo: o campo é conteúdo, não a animação dele.
+   *
+   * A transição de opacidade é o que restou, e agora ela carrega a narrativa
+   * inteira: em estados discretos o campo ainda conta disperso → dissolvido,
+   * só não fica preso à rolagem. São os mesmos 300ms das metades do símbolo.
+   *
+   * A transição de `translate`/`scale` nas unidades saiu junto com a
+   * convergência — não há mais trajetória a suavizar.
+   */
+  .plane {
+    transform: none;
+    transition: opacity 300ms ease;
+  }
+}
