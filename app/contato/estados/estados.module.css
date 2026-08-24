@@ -1,0 +1,38 @@
+/* Rota de diagnóstico. Layout utilitário — não faz parte da composição. */
+
+/* Posicionado para pintar acima da camada de ambientação — ver a nota longa em
+   components/chrome/Footer.module.css. */
+.pagina {
+  position: relative;
+  z-index: var(--z-content);
+  padding: var(--space-2xl) var(--page-margin) var(--space-3xl);
+}
+
+.intro {
+  margin-block-start: var(--space-sm);
+  color: var(--text-muted);
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(23rem, 1fr));
+  gap: var(--space-xl);
+  margin-block-start: var(--space-2xl);
+}
+
+.rotulo {
+  color: var(--brass);
+}
+
+.nota {
+  margin-block: 0.5rem var(--space-md);
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.moldura {
+  padding: var(--space-md);
+  border: 1px dashed var(--line-brass);
+  border-radius: var(--radius-panel);
+}

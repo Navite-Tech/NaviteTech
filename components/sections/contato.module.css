@@ -1,0 +1,157 @@
+/*
+ * O formulário da CTA (§9.7).
+ *
+ * A composição da seção é centralizada e o `( )` reconstituído fica ATRÁS dela,
+ * na camada fixa. Por isso a coluna é estreita: ela precisa caber no vão
+ * INTERNO do símbolo, entre as duas crescentes, para que nenhuma linha de texto
+ * ou borda de campo cruze a peça. A medida está em app/page.module.css, onde a
+ * coluna é definida.
+ *
+ * Nada aqui é animado pela rolagem. O formulário é interface: as únicas
+ * transições são as de foco e de estado, em 140ms.
+ */
+
+.form {
+  display: grid;
+  gap: 0.8rem;
+  text-align: start;
+}
+
+/*
+ * Nome e e-mail lado a lado. É o único par que cabe: os dois são curtos e a
+ * ordem de tabulação continua sendo a de leitura.
+ */
+.linha {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.campo {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  min-inline-size: 0;
+}
+
+/*
+ * Rótulo VISÍVEL, sempre (§9.7 e §14). Placeholder no lugar de rótulo some no
+ * instante em que se começa a digitar, que é justamente quando ele faria falta.
+ */
+.rotulo {
+  font-family: var(--font-brand);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.entrada {
+  inline-size: 100%;
+  padding: 0.72rem 0.85rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background-color: rgb(255 255 255 / 3%);
+  font-family: inherit;
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--text);
+  transition:
+    border-color var(--dur-micro) var(--ease-out),
+    background-color var(--dur-micro) var(--ease-out);
+}
+
+.entrada:hover {
+  border-color: var(--line-brass);
+}
+
+.entrada:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+  border-color: transparent;
+}
+
+.entrada:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+textarea.entrada {
+  resize: vertical;
+  min-block-size: 4.2rem;
+}
+
+/*
+ * Campo com erro. A borda muda de cor E o texto do erro aparece: cor sozinha
+ * não é informação suficiente (§14), e é por isso que a mensagem existe.
+ */
+.campo[data-erro] .entrada {
+  border-color: var(--erro);
+}
+
+.erro {
+  font-size: var(--text-micro);
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.4;
+  color: var(--erro);
+}
+
+.rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  margin-block-start: 0.4rem;
+}
+
+.status {
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+  font-size: var(--text-micro);
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.status[data-estado='error'] {
+  color: var(--erro);
+}
+
+/* --- sucesso -------------------------------------------------------------- */
+
+/*
+ * Substitui o formulário no lugar dele — inline, sem modal (§9.7). A altura
+ * mínima é a do formulário para que a seção não encolha de repente sob o
+ * conteúdo; um salto de layout aqui contaria como CLS.
+ */
+.sucesso {
+  display: grid;
+  align-content: center;
+  gap: 0.7rem;
+  min-block-size: 21rem;
+  padding: var(--space-lg) var(--space-md);
+  border: 1px solid var(--line-brass);
+  border-radius: var(--radius-panel);
+  text-align: start;
+}
+
+.sucessoTitulo {
+  font-size: var(--text-lead);
+  color: var(--text);
+}
+
+.sucessoTexto {
+  font-size: var(--text-small);
+  line-height: var(--leading-loose);
+  color: var(--text-muted);
+}
+
+@media (width < 640px) {
+  .linha {
+    grid-template-columns: 1fr;
+  }
+}
