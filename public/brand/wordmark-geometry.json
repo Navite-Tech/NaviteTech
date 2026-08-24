@@ -1,0 +1,28 @@
+{
+  "source": "references/navite-symbol-to-use-in-Header-official.png",
+  "note": "Vetor canônico de implementação, traçado do PNG aprovado. Não é master oficial da marca.",
+  "viewBox": {
+    "w": 776.23,
+    "h": 200
+  },
+  "sourceBox": {
+    "x": 437.39,
+    "y": 285.69,
+    "w": 1072.43,
+    "h": 276.32
+  },
+  "metrics": {
+    "capHeightNavite": 88.71,
+    "capHeightTech": 46.38,
+    "capRatioTechOverNavite": 0.52,
+    "verticalGap": 64.91,
+    "gapOverCapNavite": 0.73,
+    "widthOverCapNavite": 8.75,
+    "letterGapsNavite": [70.93, 58.45, 69.61, 72.53, 70.27],
+    "letterGapsTech": [40.55, 40.63, 43.69]
+  },
+  "fitErrorPx": {
+    "mean": 0.56,
+    "max": 0.94
+  }
+}
