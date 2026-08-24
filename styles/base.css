@@ -1,0 +1,109 @@
+/* Reset e base — Navite Tech */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  color-scheme: dark;
+  background-color: var(--navy-900);
+  /* âncoras do menu param abaixo do header fixo, inclusive por teclado */
+  scroll-padding-top: calc(var(--header-height) + 1.5rem);
+  /*
+   * Reserva a calha da barra de rolagem desde o primeiro paint. Sem isso, a
+   * barra aparecendo estreita a viewport e desloca tudo que é medido em
+   * porcentagem — foi a origem do único CLS medido (0,0056 no desktop).
+   */
+  scrollbar-gutter: stable;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  background-color: var(--navy-900);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-body);
+  font-optical-sizing: auto;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizelegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: var(--weight-medium);
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::selection {
+  background-color: var(--brass);
+  color: var(--navy-900);
+}
+
+/* --- suavização de rolagem ------------------------------------------------ */
+
+/*
+ * O Lenis marca o <html> com `lenis` e `lenis-smooth` quando assume a rolagem
+ * (ver lib/scroll/smoothing.ts). Estas duas regras vêm da folha do próprio
+ * Lenis e existem para o navegador não rolar em paralelo com ele.
+ *
+ * Ficam aqui, e não via `import 'lenis/dist/lenis.css'`, para não puxar um
+ * arquivo de CSS de dependência para dentro do bundle inicial por duas regras.
+ */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+html.lenis-smooth {
+  scroll-behavior: auto !important;
+}

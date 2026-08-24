@@ -1,0 +1,297 @@
+/*
+ * Design tokens — Navite Tech
+ *
+ * Cores e métricas tipográficas medidas numericamente dos arquivos de
+ * referência aprovados, não estimadas a olho. Ver o plano, §3.3 e §3.4.
+ *
+ * REGRA DOS ACENTOS (não são intercambiáveis):
+ *   --brass  institucional/primário — wordmark TECH, microtipografia,
+ *            indicadores, réguas, tags, detalhes de interface
+ *   --sage   editorial/secundário — palavras destacadas em headlines e
+ *            momentos conceituais
+ * Navy é a superfície dominante; bone é a cor principal de tipografia e do
+ * símbolo. Ambos os acentos com parcimônia.
+ */
+
+:root {
+  /* ---------------------------------------------------------------- cor -- */
+
+  /* superfície — moda exata medida em cada frame de referência */
+  --navy-900: #00101e; /* hsl(208 100% 6%)  hero */
+  --navy-800: #011526; /* hsl(209 95% 8%)   seção problema */
+  --navy-700: #022038; /* hsl(209 92% 12%)  superfícies elevadas, cards */
+
+  /* marca */
+  --bone: #f2efea; /* símbolo em logoNavite.png */
+  --bone-dim: #c3baad; /* lado sombreado do símbolo */
+  --bone-lit: #f5f2ea; /* aresta iluminada */
+
+  /*
+   * Rampa do material do símbolo, medida ao longo do EIXO DA LUZ — que é o
+   * parâmetro real de um linearGradient, não a altura da peça.
+   *
+   * Medindo assim (tools/fit-light-ramp.cjs) o "rebote do chão" que a primeira
+   * versão tinha desaparece: ele era o gradiente horizontal vazando num perfil
+   * medido só na vertical. Ao longo da luz a rampa é monótona, 230 → 192.
+   *
+   * Os offsets t que a crescente ocupa são [0,00 .. 0,91]; paradas fora disso
+   * não pintam pixel nenhum. Ver lib/symbol/light.ts.
+   */
+  --face-lit: #fffaee; /* t≈0,00 — 250 */
+  --face-mid: #e9e4d8; /* t≈0,22 — 228 */
+  --face-shade: #dcd7cb; /* t≈0,48 — 215 */
+  --face-deep: #d2cdc1; /* t≈0,80 — 205 */
+
+  /*
+   * Parede lateral da extrusão: ~85% da luminância da face na mesma posição.
+   * Precisa ler como FACE ILUMINADA de lado, não como sombra projetada —
+   * escura demais e a peça vira adesivo com drop shadow.
+   */
+  --extrude-lit: #d9d4c8; /* 212 */
+  --extrude-mid: #c7c2b6; /* 194 */
+  --extrude-shade: #bcb7ab; /* 183 */
+  --extrude-deep: #ada89c; /* 168 */
+
+  /* acentos */
+  --brass: #a79e7b; /* medido no TECH do wordmark oficial (#a49c7a) */
+  --brass-dim: #7c7563;
+  --sage: #8c947a; /* medido na 3ª linha do headline do hero */
+
+  /*
+   * Sage para SUPERFÍCIE CLARA.
+   *
+   * Duas das quatro artes de Serviços nascem sobre campo quase branco, e a
+   * palavra de acento do título pousa direto sobre ele — sem véu, que é o
+   * ponto da Fase 15. Ali o `--sage` mede 2,2:1, abaixo de qualquer critério.
+   * Este é o mesmo matiz rebaixado até 5,4:1 sobre um campo de L≈0,70.
+   *
+   * Não substitui o sage em lugar nenhum: os cards claros o apontam localmente
+   * (services.module.css) e o resto da página não vê diferença.
+   */
+  --sage-deep: #4f5744;
+
+  /*
+   * Erro de formulário. Não estava na paleta do §3.3 porque a paleta foi medida
+   * nas referências, e nenhuma delas tem formulário. É a única cor deste
+   * projeto que não veio de uma medição — escolhida como um barro dessaturado,
+   * para dizer "errado" sem trazer um vermelho de alerta para dentro de uma
+   * peça que é navy, osso e latão. O contraste sobre navy é conferido por
+   * `npm run check:contrast`.
+   */
+  --erro: #e2947c;
+
+  /* texto */
+  --text: var(--bone);
+  --text-muted: #aeb7c0;
+  --text-faint: #75818f; /* clareado de #6b7784: aquele dava 4,21:1, abaixo de AA */
+
+  /* linhas e superfícies translúcidas */
+  --line-brass: rgb(167 158 123 / 20%);
+
+  /*
+   * Borda de controle interativo. Medida na pilula do hero: #626763, que sobre
+   * o navy resolve como --bone-dim a 50%. E bem mais presente que --line-brass,
+   * que serve para divisorias e paineis, nao para algo que se clica.
+   */
+  --line-bone: rgb(195 186 173 / 50%);
+  --line-soft: rgb(174 183 192 / 14%);
+  --surface-blur: rgb(0 16 30 / 72%);
+
+  /* --------------------------------------------------------- tipografia -- */
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-brand: var(--font-jost), var(--font-inter), system-ui, sans-serif;
+
+  /*
+   * Escala derivada do hero-reference.png (1672px de largura):
+   * headline: caixa alta no topo em y 280, base da 3a linha em 498, e
+   *   ascendente da 3a linha em 437. Com as metricas do Inter (cap 0,7275em,
+   *   ascendente 0,75em) isso resolve em corpo 81,3px e avanco 79,4px
+   *   ->  4,86vw / lh 0,977. A primeira versao usava 5,1vw / 0,95, medidos a
+   *   olho no bloco inteiro: 4,3% grande demais no corpo.
+   * corpo cap 17px com avanço 26px            ->  17px / lh 1,55
+   * eyebrow cap ~12px com tracking largo
+   * numeral 01 altura de figura 74px          ->  ~103px de corpo, peso 300
+   */
+  --text-display: clamp(2.75rem, 4.86vw, 5.1rem);
+  --text-h2: clamp(2rem, 3.6vw, 3.4rem);
+  --text-h3: clamp(1.5rem, 2.4vw, 2.25rem);
+  --text-numeral: clamp(4rem, 6.4vw, 6.5rem);
+  --text-lead: clamp(1rem, 1.15vw, 1.0625rem);
+  --text-body: 1rem;
+  --text-small: 0.875rem;
+  --text-micro: 0.6875rem;
+
+  --leading-display: 0.977;
+  --leading-title: 1.06;
+  --leading-snug: 1.18;
+  --leading-body: 1.55;
+  --leading-loose: 1.65;
+
+  --tracking-display: -0.025em;
+  --tracking-title: -0.02em;
+  --tracking-snug: -0.012em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.08em;
+  --tracking-eyebrow: 0.18em;
+
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* ------------------------------------------------------------ espaço -- */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2.5rem;
+  --space-xl: 4rem;
+  --space-2xl: 6rem;
+  --space-3xl: 9rem;
+
+  /* ------------------------------------------------------------ layout -- */
+  /* margem lateral medida: 6% da largura no hero de referência */
+  --page-margin: clamp(1.25rem, 6vw, 6.25rem);
+  --gutter: 1.5rem;
+  --measure: 34rem; /* largura máxima confortável de leitura */
+  /*
+   * O header é uma BARRA FLUTUANTE, e por isso são três números, não um.
+   *
+   *   --header-bar     altura da peça
+   *   --header-inset   quanto ela desce do topo da janela
+   *   --header-height  ESPAÇO RESERVADO no topo do conteúdo — é este que as
+   *                    cascas de seção somam
+   *
+   * A caixa reservada é CONSTANTE: ao rolar, a barra encolhe POR DENTRO dela.
+   * É o que permite condensar sem reflow e sem CLS — a versão anterior
+   * mudava a altura da faixa inteira.
+   *
+   * A faixa anterior media 9rem (144px) porque era de largura inteira, com o
+   * wordmark em duas linhas ancorado no topo (medido no hero-reference.png). A
+   * barra flutuante ocupa 68px e desce 14 do topo: 82 de tinta, 84 de reserva.
+   */
+  --header-bar: 4.25rem;
+  --header-inset: 0.875rem;
+  --header-height: 5.25rem;
+
+  /* contido: o card de serviços usa 10px; a barra pede um arco maior, não uma pílula */
+  --header-radius: 1.25rem;
+
+  /*
+   * Tamanho base do símbolo — o estado `hero`, escala 1.
+   *
+   * Medido como 33,33% da LARGURA. Entre duas referências de aspectos
+   * diferentes (1,50 e 1,78) o símbolo bate em vw — 32,6 contra 32,5 — e
+   * diverge 18% em vh. O teto em vh protege viewports baixas, onde 33vw
+   * transbordaria a altura.
+   */
+  --symbol-size: min(33.33vw, 62vh);
+
+  /*
+   * Escala das seções presas — o fator que encurta o curso no tablet (§12:
+   * "3 seções, durações menores").
+   *
+   * Multiplica só o EXCEDENTE sobre uma tela, nunca a tela que a seção consome
+   * por estar visível. Multiplicando o comprimento inteiro, o hero (1,3 telas)
+   * cairia para 1,04 e o curso dele — 0,3 tela — viraria 0,04: a saída
+   * encenada do headline aconteceria em 31px de rolagem. Aplicado ao
+   * excedente, a proporção entre as seções é preservada e nenhuma fica sem
+   * curso. O comprimento base continua vivendo em lib/scroll/triggers.ts.
+   */
+  --length-scale: 1;
+
+  /* --------------------------------------------------------- superfície -- */
+  /* medido na borda do card de serviços: arco de 10px no canto (y 79..88) */
+  --radius-panel: 10px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+
+  /* ------------------------------------------------------------ camadas -- */
+  --z-bg: 0;
+  --z-symbol: 1;
+  --z-content: 2;
+  --z-hud: 5;
+  --z-header: 10;
+  --z-overlay: 20;
+
+  /* ----------------------------------------------------------- movimento -- */
+  --dur-micro: 140ms;
+  --dur-short: 220ms;
+  --dur-base: 420ms;
+  --dur-reveal: 520ms;
+  --dur-long: 900ms;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/*
+ * Tablet (900–1279). O §12 pede as mesmas três seções presas com durações
+ * menores: numa tela de 1024x768 o percurso inteiro media 14,4 telas, o mesmo
+ * do desktop, num aparelho em que a rolagem custa mais gesto.
+ */
+@media (900px <= width < 1280px) {
+  :root {
+    --length-scale: 0.75;
+  }
+}
+
+/*
+ * Abaixo de 900px a peça deixa de ser protagonista e vira marca d'água atrás do
+ * conteúdo (§9.2). O tamanho de desktop — 33,33vw, medido nas referências —
+ * dá 130px numa tela de 390: não lê como marca d'água, lê como um glifo
+ * perdido no meio do parágrafo, que foi o que a captura mostrou.
+ *
+ * Aqui a base é a MENOR entre 62% da largura e 34% da altura, o que com a
+ * escala 1,25 do §9.2 põe a tinta do `( )` em ~75% da largura a 390px sem
+ * nunca ocupar mais que 43% da altura — atrás do texto, e ainda assim
+ * reconhecível como a marca.
+ */
+@media (width < 900px) {
+  :root {
+    --symbol-size: min(62vw, 34vh);
+
+    /*
+     * A barra encolhe junto: 56px de peça sobre 12 de folga dão 68 de reserva,
+     * contra os 144 da faixa anterior. Numa tela de 844px de altura isso
+     * devolve 9% da janela ao conteúdo.
+     */
+    --header-bar: 3.5rem;
+    --header-inset: 0.75rem;
+    --header-height: 4.25rem;
+
+    /*
+     * O display encolhe abaixo de 900px, e o número sai de uma restrição
+     * medida, não de gosto.
+     *
+     * O headline do hero tem três quebras EXPLÍCITAS (§9.2), e toda a métrica
+     * vertical do bloco depende delas. A linha mais larga, "funcionar
+     * melhor.", ocupa 7,25px de tinta por px de corpo — medido. Com os 2,75rem
+     * do piso da escala de desktop ela pede 319px, e a coluna de leitura tem
+     * 317 a 360px de largura e 280 a 320: o headline caía para quatro linhas a
+     * 360 e cinco a 320, desmontando a composição inteira abaixo dele.
+     *
+     * 11,6vw é a maior taxa que mantém as três linhas até 320px, com a coluna
+     * valendo ~0,876 da largura da janela. O teto de 2,75rem preserva
+     * exatamente o tamanho de hoje de 380px para cima, então nada muda onde já
+     * funcionava; o piso protege janelas absurdas.
+     *
+     * O §12 propõe "8,5vw, máx 2,6rem" nesta casa — 27px a 320px de largura,
+     * pequeno sem necessidade. É a mesma correção que a Fase 2 já havia feito
+     * na linha do desktop, onde os 5,1vw propostos viraram os 4,86vw medidos.
+     */
+    --text-display: clamp(2.2rem, 11.6vw, 2.75rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-micro: 0ms;
+    --dur-short: 0ms;
+    --dur-base: 0ms;
+    --dur-reveal: 0ms;
+    --dur-long: 0ms;
+  }
+}
