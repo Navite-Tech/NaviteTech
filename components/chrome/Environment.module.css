@@ -1,0 +1,80 @@
+/*
+ * Medido em references/hero-reference.png (node tools/measure-hero.cjs e o
+ * perfil de chão em tools/compare-hero.cjs).
+ *
+ * NÃO é uma vinheta genérica: a referência mostra um AMBIENTE — uma parede ao
+ * fundo, um chão que recebe luz, e o horizonte entre os dois.
+ *
+ * Horizonte, medido linha a linha na faixa x 50%..95%:
+ *
+ *   y 82,0%   22,1   parede
+ *   y 83,0%   26,1   começa a virar
+ *   y 83,5%   33,6
+ *   y 84,4%   38,3   chão, no máximo
+ *   y 86,0%   37,4
+ *   y 90,0%   32,3   o plano recua e escurece
+ *   y 99,5%   25,2
+ *
+ * A subida de 22 para 38 acontece em 2 pontos percentuais de altura. É uma
+ * aresta, não uma rampa — e foi o que a primeira versão errou, com um gradiente
+ * difuso que nunca chegava a 33 e clareava o meio da tela sem motivo.
+ *
+ * O clareamento é BRANCO, não azul: (1,18,32) vira (18,35,49), +17 em cada
+ * canal, que é branco a 6,7%. O chão não tem cor própria — só devolve luz.
+ *
+ * A luz cai para a esquerda: no mesmo y 86%, a mediana vai de 32 em x 62% para
+ * 14 em x 2%. Por isso o chão é uma elipse larga ancorada embaixo à direita, e
+ * não uma faixa uniforme: a borda superior da elipse É o horizonte, e o
+ * afinamento lateral vem de graça.
+ */
+
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bg);
+  pointer-events: none;
+
+  /*
+   * Sem `filter` e sem `backdrop-filter`: esta camada cobre a viewport inteira
+   * e qualquer um dos dois a re-rasterizaria a cada quadro de rolagem.
+   * Gradiente puro é composto uma vez e custa zero depois disso.
+   */
+  background:
+    /*
+     * O CHÃO. A elipse tem 17% de altura ancorada na base, então sua borda
+     * superior cai exatamente em 83% — o horizonte medido. As duas primeiras
+     * paradas ficam quase juntas para a aresta chegar inteira.
+     */
+    radial-gradient(
+      104% 16.6% at 69% 100%,
+      rgb(255 255 255 / 4.2%) 0%,
+      rgb(255 255 255 / 5.4%) 42%,
+      rgb(255 255 255 / 6.2%) 84%,
+      rgb(255 255 255 / 5.8%) 94%,
+      rgb(255 255 255 / 0%) 100%
+    ),
+    /*
+     * O chão devolve luz para a PAREDE, logo acima do horizonte — e só do lado
+     * direito. Medido em y 80%: a referência vai de 13,7 em x 5% a 23,4 em
+     * x 85%, enquanto de x 5% a 45% fica entre 11,9 e 16,0, ou seja, sem luz
+     * nenhuma. Por isso é uma elipse à direita e não uma faixa.
+     */
+    radial-gradient(
+        44% 5.5% at 80% 80%,
+        rgb(255 255 255 / 3.8%) 0%,
+        rgb(255 255 255 / 1.2%) 62%,
+        rgb(255 255 255 / 0%) 100%
+      ),
+    /*
+     * Luz ambiente da parede: cresce para a direita e some no canto
+     * inferior-esquerdo, que na referência não recebe luz nenhuma (12,0 de
+     * luminância, que é o próprio navy-900).
+     */
+    radial-gradient(
+        84% 76% at 76% 42%,
+        rgb(38 82 124 / 11%) 0%,
+        rgb(22 52 82 / 6%) 48%,
+        rgb(0 0 0 / 0%) 80%
+      ),
+    var(--navy-900);
+}

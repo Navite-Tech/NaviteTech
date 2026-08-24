@@ -1,0 +1,19 @@
+.root {
+  position: fixed;
+  inset-block-start: var(--space-sm);
+  inset-inline-start: var(--space-sm);
+  z-index: var(--z-overlay);
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--brass);
+  border-radius: var(--radius-sm);
+  background-color: var(--navy-800);
+  color: var(--text);
+  font-size: var(--text-small);
+  text-decoration: none;
+  transform: translateY(-160%);
+  transition: transform var(--dur-short) var(--ease-out);
+}
+
+.root:focus-visible {
+  transform: translateY(0);
+}

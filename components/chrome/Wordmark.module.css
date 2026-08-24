@@ -1,0 +1,10 @@
+.root {
+  display: block;
+  height: auto;
+  color: var(--bone);
+}
+
+/* TECH sempre no acento institucional — ver a regra dos acentos em tokens.css */
+.tech {
+  fill: var(--brass);
+}

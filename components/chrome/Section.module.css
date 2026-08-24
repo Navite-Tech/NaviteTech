@@ -1,0 +1,133 @@
+/*
+ * `--length` é o comprimento de rolagem em telas, injetado pelo componente a
+ * partir de lib/scroll/triggers.ts. Uma tela é sempre consumida por estar
+ * visível; o excedente é o curso narrativo que a coreografia fraciona.
+ */
+
+/*
+ * ORDEM DE PINTURA, do fundo para a frente:
+ *
+ *   ambiente (Environment, fixo)  ─┐ ambos em --z-bg, resolvidos por ordem de
+ *   marcadores (.ambient)         ─┘ DOM: Environment vem antes das seções
+ *   símbolo   (SymbolStage, fixo)   --z-symbol
+ *   conteúdo  (.viewport)           --z-content
+ *
+ * Para que isso funcione, `.root` NÃO pode criar contexto de empilhamento —
+ * `position: relative` com `z-index: auto` não cria. Se `.root` carregasse o
+ * z-index (como carregava antes desta fase), tudo dentro dele ficaria acima do
+ * símbolo, inclusive os marcadores, e a peça passaria a flutuar sobre o campo
+ * em vez de estar dentro dele.
+ */
+.root {
+  position: relative;
+
+  /*
+   * Uma tela é sempre consumida por estar visível; o resto é o curso narrativo.
+   * `--length-scale` encurta SÓ esse excedente — ver a nota em styles/tokens.css.
+   */
+  min-block-size: calc((1 + (var(--length, 1) - 1) * var(--length-scale, 1)) * 100dvh);
+}
+
+/*
+ * A tela presa.
+ *
+ * `sticky` em vez de `ScrollTrigger.pin`: não injeta spacer, não mexe no layout
+ * e desliga no mobile com uma media query. Ver a nota em lib/scroll/triggers.ts.
+ *
+ * Cuidado permanente: `overflow` diferente de `visible` em QUALQUER ancestral
+ * quebra sticky. É por isso que nem `main` nem `body` têm overflow definido.
+ */
+.viewport {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--z-content);
+  block-size: 100dvh;
+
+  /*
+   * A margem negativa vive AQUI, e não no `.ambient` — ela é o que permite dois
+   * irmãos presos ocuparem a MESMA tela, sem que o primeiro consuma 100dvh de
+   * fluxo.
+   *
+   * Estava no `.ambient` como `margin-block-end`, e ali ela alongava o alcance
+   * do sticky: a restrição do sticky é sobre a CAIXA DE MARGEM, e uma margem
+   * inferior de -100dvh a colapsa sobre o topo da caixa de borda, o que deixa o
+   * elemento preso até a seção inteira passar pelo topo da tela — uma tela a
+   * mais que o conteúdo. Medido: no início de Serviços os 168 cubos do Problema
+   * ainda enchiam a tela, e só saíam em 30% do curso da seção seguinte.
+   *
+   * Como `margin-block-start` no segundo irmão, a caixa de margem colapsa sobre
+   * a BASE da caixa de borda, e a restrição vira a mesma dos dois: soltar
+   * quando a base da seção alcança a base da tela — exatamente onde `--reveal`
+   * chega a 1. Ambientação e conteúdo passam a sair juntos.
+   *
+   * O seletor de IRMÃO é obrigatório. Nas seções sem ambientação a `.viewport`
+   * é o PRIMEIRO filho, e ali a margem negativa não teria com quem colapsar
+   * dentro da seção: ela escaparia pelo topo dela — colapso de margens — e
+   * puxaria a seção inteira 100dvh para cima, sobrepondo a anterior. Medido:
+   * Serviços começava 1506px depois do Problema em vez de 2447.
+   */
+}
+
+.ambient + .viewport {
+  margin-block-start: -100dvh;
+}
+
+/*
+ * O campo de ambientação acompanha a seção presa, como o símbolo — se ele
+ * rolasse embora enquanto a peça fica, a composição se desmontaria no meio do
+ * curso. A sobreposição com `.viewport` é feita pela margem negativa que vive
+ * lá; ver a nota acima.
+ */
+.ambient {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--z-bg);
+  block-size: 100dvh;
+  pointer-events: none;
+}
+
+/*
+ * Modo FLUXO — a seção cresce com o conteúdo em vez de prender a tela (§8.2,
+ * FAQ). É a mesma troca que a media query lá embaixo faz para o mobile e para
+ * movimento reduzido; aqui ela é uma escolha de composição, não de ambiente.
+ *
+ * A camada do símbolo continua fixa e continua contando a narrativa por cima —
+ * prender a tela nunca foi requisito dela.
+ */
+.flow .viewport,
+.flow .ambient + .viewport {
+  position: relative;
+  block-size: auto;
+  min-block-size: 100dvh;
+  margin-block-start: 0;
+}
+
+/*
+ * Duas situações, uma regra: abaixo de 900px (plano §12) e com movimento
+ * reduzido (§14, "todos os pins removidos; as seções viram fluxo normal").
+ *
+ * O §14 já pedia o segundo caso; ele passou a ser exigível agora porque
+ * Serviços é a primeira seção com conteúdo mais alto que uma tela. Com
+ * `--reveal` em 1 — que é o que o movimento reduzido publica — os quatro cards
+ * viram lista, e uma lista de 2400px não cabe numa tela presa de 941. A
+ * verificação completa do percurso com movimento reduzido é da Fase 12.
+ */
+@media (width < 900px), (prefers-reduced-motion: reduce) {
+  .root {
+    min-block-size: 100dvh;
+  }
+
+  .viewport,
+  .ambient + .viewport {
+    position: relative;
+    block-size: auto;
+    min-block-size: 100dvh;
+    margin-block-start: 0;
+  }
+
+  .ambient {
+    position: absolute;
+    inset: 0;
+    block-size: auto;
+  }
+}

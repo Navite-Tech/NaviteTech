@@ -1,0 +1,300 @@
+/*
+ * Header flutuante.
+ *
+ * A faixa de largura inteira e 144px de altura saiu: ela lia como cromo de
+ * template — a coisa mais genérica de uma página que, do hero para baixo, não
+ * tem nada de genérico. No lugar entra uma BARRA de 68px que desce 14px do topo
+ * e respeita uma margem lateral própria, mais estreita que a margem de página:
+ * a peça é um objeto sobre o fundo, não uma borda da janela.
+ *
+ * Três decisões de material, e todas são de contenção:
+ *
+ *   • o fundo em repouso é quase nada — 42% de navy sobre navy. O que desenha a
+ *     barra é o FIO, não o preenchimento;
+ *   • o raio é 20px, não 999. Uma pílula traria o vocabulário de botão de SaaS
+ *     para a peça institucional da página;
+ *   • brass aparece em dois lugares só: o fio da borda e o traço da ação.
+ *
+ * A caixa reservada no topo do conteúdo (`--header-height`) é CONSTANTE. Ao
+ * rolar, quem encolhe é a barra, por dentro dela — condensar não custa reflow.
+ */
+
+/*
+ * A barra SANGRA para fora da grade de texto, e a marca fica DENTRO dela.
+ *
+ * O recuo lateral é a margem de página menos a folga interna da barra: assim o
+ * wordmark começa exatamente onde começa o headline do hero, e o fio da barra
+ * passa 24px além dele dos dois lados. É a mesma gramática das anotações do
+ * Problema — o texto respeita a grade, os elementos de marca invadem a margem.
+ *
+ * O piso de 0,75rem protege telas estreitas, onde a margem de página é menor
+ * que a folga interna e a conta ficaria negativa.
+ */
+.root {
+  --barra-pad: clamp(1rem, 1.7vw, 1.75rem);
+
+  position: fixed;
+  inset-block-start: var(--header-inset);
+  inset-inline: max(0.75rem, calc(var(--page-margin) - var(--barra-pad)));
+  z-index: var(--z-header);
+}
+
+.barra {
+  position: relative;
+  display: flex;
+  align-items: center;
+  block-size: var(--header-bar);
+  padding-inline: var(--barra-pad);
+  border: 1px solid var(--line-brass);
+  border-radius: var(--header-radius);
+  background-color: rgb(0 16 30 / 42%);
+  transition:
+    block-size var(--dur-short) var(--ease-out),
+    background-color var(--dur-short) var(--ease-out),
+    border-color var(--dur-short) var(--ease-out);
+}
+
+/*
+ * Condensada: 8px mais baixa e opaca de verdade.
+ *
+ * O `backdrop-filter` só entra AQUI, e a razão é a mesma de sempre — ele não
+ * pode custar frames durante a entrada do hero, que é onde a página gasta o
+ * orçamento de pintura. Em repouso, sobre o navy chapado, ele não teria o que
+ * desfocar; a partir do momento em que há conteúdo passando por baixo, tem.
+ */
+.condensed .barra {
+  block-size: calc(var(--header-bar) - 0.5rem);
+  border-color: rgb(167 158 123 / 30%);
+  background-color: var(--surface-blur);
+  backdrop-filter: blur(14px);
+}
+
+/* --- a marca -------------------------------------------------------------- */
+
+/*
+ * Centrada na barra, e isto é uma mudança de fundo em relação à faixa antiga.
+ *
+ * Lá a marca era ancorada no topo com 3,9375rem de recuo, porque o
+ * hero-reference.png põe NAVITE na mesma linha do menu e deixa TECH descer
+ * sozinho — uma composição de página, não de barra. Dentro de uma peça de 68px
+ * o bloco de duas linhas centra, e é o centro dele que alinha com a navegação.
+ */
+.brand {
+  flex: none;
+  display: flex;
+  align-items: center;
+  color: var(--bone);
+  text-decoration: none;
+}
+
+/* --- navegação ------------------------------------------------------------ */
+
+/*
+ * Centrada na BARRA, não no espaço que sobra.
+ *
+ * Com `margin-inline: auto` num flex, a navegação centra entre a marca e a
+ * ação — e como as duas têm larguras diferentes (109px contra ~150), ela cairia
+ * 20px à esquerda do centro óptico. Absoluta, ela não sabe o que existe dos
+ * lados. Abaixo de 900px ela some inteira e não há sobreposição possível.
+ */
+.nav {
+  position: absolute;
+  inset-inline-start: 50%;
+  translate: -50% 0;
+}
+
+.list {
+  display: flex;
+  gap: clamp(1.25rem, 2.4vw, 2.5rem);
+  margin: 0;
+}
+
+.link {
+  position: relative;
+  display: inline-block;
+  padding-block: 0.35rem;
+  font-size: var(--text-small);
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
+.link::after {
+  content: '';
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  inline-size: 100%;
+  block-size: 1px;
+  background-color: var(--brass);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-short) var(--ease-out);
+}
+
+.link:hover {
+  color: var(--text);
+}
+
+.link:hover::after {
+  transform: scaleX(1);
+}
+
+/* --- a ação --------------------------------------------------------------- */
+
+/*
+ * Contato não é um botão.
+ *
+ * A referência de header traz uma pílula roxa de SaaS nesse canto; aqui a ação
+ * é uma PALAVRA seguida de um traço que aponta — o mesmo vocabulário das linhas
+ * de anotação do Problema e do trilho do Método. É a diferença entre uma página
+ * que pede clique e uma que oferece caminho.
+ */
+.acao {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-inline-start: auto;
+  font-size: var(--text-small);
+  color: var(--brass);
+  text-decoration: none;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
+.acao:hover {
+  color: var(--bone);
+}
+
+/* O traço: um fio que cresce e uma ponta de duas bordas, como a seta do card. */
+.seta {
+  position: relative;
+  display: block;
+  inline-size: 2.25rem;
+  block-size: 1px;
+  background: linear-gradient(to right, rgb(167 158 123 / 25%), var(--brass));
+  transition:
+    inline-size var(--dur-short) var(--ease-out),
+    background var(--dur-micro) var(--ease-out);
+}
+
+.seta::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 0;
+  inline-size: 5px;
+  block-size: 5px;
+  border-block-start: 1px solid currentcolor;
+  border-inline-end: 1px solid currentcolor;
+  rotate: 45deg;
+  translate: 0 -50%;
+  color: var(--brass);
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
+.acao:hover .seta {
+  inline-size: 3rem;
+  background: linear-gradient(to right, rgb(242 239 234 / 25%), var(--bone));
+}
+
+.acao:hover .seta::after {
+  color: var(--bone);
+}
+
+/* --- menu mobile ---------------------------------------------------------- */
+
+.toggle {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  margin-inline: auto -0.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bar {
+  position: relative;
+  display: block;
+  inline-size: 18px;
+  block-size: 1px;
+  background-color: var(--text);
+  transition: background-color var(--dur-micro) var(--ease-out);
+}
+
+.bar::before,
+.bar::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  block-size: 1px;
+  background-color: var(--text);
+  transition: transform var(--dur-short) var(--ease-out);
+}
+
+.bar::before {
+  inset-block-start: -5px;
+}
+
+.bar::after {
+  inset-block-start: 5px;
+}
+
+.barOpen {
+  background-color: transparent;
+}
+
+.barOpen::before {
+  transform: translateY(5px) rotate(45deg);
+}
+
+.barOpen::after {
+  transform: translateY(-5px) rotate(-45deg);
+}
+
+/*
+ * O painel é uma SEGUNDA peça flutuante, não uma cortina presa à barra: mesmo
+ * raio, mesmo fio, uma folga de 8px entre os dois. Ele cobre o conteúdo em vez
+ * de empurrá-lo, e o foco fica preso dentro dele enquanto estiver aberto (ver
+ * Header.tsx).
+ */
+.panel {
+  margin-block-start: 0.5rem;
+  padding: var(--space-md) var(--barra-pad) var(--space-lg);
+  border: 1px solid var(--line-brass);
+  border-radius: var(--header-radius);
+  background-color: var(--surface-blur);
+  backdrop-filter: blur(14px);
+}
+
+.panelList {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+}
+
+.panelLink {
+  display: block;
+  padding-block: var(--space-2xs);
+  font-size: var(--text-h3);
+  letter-spacing: var(--tracking-snug);
+  color: var(--text);
+  text-decoration: none;
+}
+
+@media (width >= 900px) {
+  .toggle,
+  .panel {
+    display: none;
+  }
+}
+
+@media (width < 900px) {
+  .nav,
+  .acao {
+    display: none;
+  }
+}

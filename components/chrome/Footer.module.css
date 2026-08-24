@@ -1,0 +1,70 @@
+/*
+ * `position: relative` + `z-index` NÃO são enfeite: sem eles o rodapé inteiro
+ * fica INVISÍVEL, e ficou desde a Fase 2.
+ *
+ * `Environment` é uma camada `fixed` com `z-index: 0`. Na ordem de pintura do
+ * CSS, um elemento POSICIONADO com z-index 0 é pintado no passo 8 — depois do
+ * passo 4, que é onde entra o texto de blocos não posicionados. O rodapé era
+ * conteúdo de bloco comum: fundo e borda pintavam abaixo da ambientação, e o
+ * wordmark e a linha legal simplesmente não apareciam.
+ *
+ * Nada denunciava: o HTML estava correto, a árvore de acessibilidade estava
+ * correta, o contraste medido estava correto, e as seções da home não sofriam
+ * do problema porque a tela presa delas já carrega `z-index: var(--z-content)`.
+ * Só uma medição de TINTA na captura viu. A lei está em
+ * `scripts/check-contato.mjs`.
+ */
+.root {
+  position: relative;
+  z-index: var(--z-content);
+  border-block-start: 1px solid var(--line-soft);
+  background-color: var(--navy-900);
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-lg);
+  padding: var(--space-xl) var(--page-margin) var(--space-lg);
+}
+
+.brand {
+  color: var(--bone);
+}
+
+.block {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.link {
+  font-size: var(--text-small);
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
+.link:hover {
+  color: var(--text);
+}
+
+.legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  inline-size: 100%;
+  padding-block-start: var(--space-md);
+  border-block-start: 1px solid var(--line-soft);
+  font-family: var(--font-brand);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.sep::before {
+  content: '·';
+  margin-inline-end: 0.75rem;
+}

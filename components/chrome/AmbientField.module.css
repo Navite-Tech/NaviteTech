@@ -1,0 +1,184 @@
+/*
+ * Campo de ambientação. Geometria toda medida — ver lib/content/ambient.ts.
+ *
+ * Tom: SAGE. Nas três referências todo elemento decorativo tem g > r; no hero
+ * são 12 de 12 quadrados, com média #8c957c contra o token #8c947a. A razão
+ * completa está no cabeçalho de lib/content/ambient.ts.
+ */
+
+.field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/*
+ * `--peak` é a opacidade final de cada família, DERIVADA da cor medida.
+ *
+ * Sobre o navy-900 (luminância 13,6), a cor c medida com opacidade α resolve
+ * α ≈ (lum(c) − 13,6) / (lum(base) − 13,6):
+ *
+ *   quadrado solto   #8c957c  → é o próprio --sage: α = 1,0
+ *   fio da régua     #536261  → α ≈ 0,6
+ *   fio do tique     #464f57  → α ≈ 0,5
+ *   estrela          pico +46 sobre 14,5, com --bone-dim de luminância 187:
+ *                    α ≈ (60 − 13,6) / (187 − 13,6) = 0,27
+ *
+ * Os quadrados TERMINAIS de régua e tique medem #99a285 e #99a188 — mais claros
+ * que o token, não mais escuros. Por isso o elemento inteiro fica em α = 1 e
+ * quem é dimado é só o fio, na própria cor de fundo dele.
+ */
+.mark {
+  --peak: 1;
+
+  position: absolute;
+  inset-block-start: var(--y);
+  inset-inline-start: var(--x);
+  display: block;
+
+  /*
+   * A entrada: os marcadores chegam por ÚLTIMO (§9.2), escalonados de 70ms pela
+   * ordem em que aparecem nos dados, que é a ordem de cima para baixo na tela.
+   *
+   * `opacity` só — nada de transform. São doze nós que a rolagem nunca toca;
+   * promovê-los a camada de composição por causa de um fade de entrada seria
+   * pagar memória de GPU pelo resto da sessão.
+   */
+  opacity: 0;
+  animation: mark-in var(--dur-reveal) var(--ease-out) forwards;
+  animation-delay: calc(var(--delay) + var(--i) * 70ms);
+}
+
+@keyframes mark-in {
+  to {
+    opacity: var(--peak);
+  }
+}
+
+/* --- quadrado solto ------------------------------------------------------ */
+
+.square {
+  inline-size: var(--size);
+
+  /* pixel quadrado: a altura acompanha a largura, não a altura da viewport */
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background-color: var(--sage);
+}
+
+/* --- régua horizontal terminada em quadrado ------------------------------ */
+
+.rule {
+  display: flex;
+  align-items: center;
+  inline-size: calc(var(--length) + var(--size));
+  block-size: var(--size);
+  translate: 0 -50%;
+}
+
+.rule::before {
+  content: '';
+  flex: 1;
+  block-size: 1px;
+  background-color: rgb(140 148 122 / 60%);
+}
+
+.rule::after {
+  content: '';
+  inline-size: var(--size);
+  aspect-ratio: 1;
+  background-color: var(--sage);
+}
+
+/* --- tique vertical com quadrado destacado -------------------------------- */
+
+.tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  inline-size: var(--size);
+  translate: -50% 0;
+}
+
+.tick::before {
+  content: '';
+  block-size: var(--length);
+  inline-size: 1px;
+
+  /* na referência o tique nasce tênue no topo e ganha corpo descendo */
+  background: linear-gradient(to bottom, rgb(140 148 122 / 12%), rgb(140 148 122 / 50%));
+}
+
+.tick::after {
+  content: '';
+  margin-block-start: var(--gap);
+  inline-size: var(--size);
+  aspect-ratio: 1;
+  background-color: var(--sage);
+}
+
+/* --- estrela de quatro pontas --------------------------------------------- */
+
+/*
+ * Medida: pico de +46 e +38 de luminância sobre um fundo de 14,5 e 17,1, com
+ * braço de 2 a 3px que desaparece em ~45px. É quase subliminar — e é o que
+ * impede o fundo de ler como cor chapada.
+ *
+ * Dois gradientes cruzados, não uma imagem: o afunilamento do braço É a parada
+ * do gradiente, então não há asset, não há requisição e não há rasterização.
+ */
+.sparkle {
+  --peak: 0.27;
+
+  inline-size: var(--w);
+  block-size: var(--h);
+  translate: -50% -50%;
+}
+
+.sparkle::before,
+.sparkle::after {
+  content: '';
+  position: absolute;
+  background: linear-gradient(
+    var(--dir, to right),
+    rgb(0 0 0 / 0%),
+    var(--bone-dim) 50%,
+    rgb(0 0 0 / 0%)
+  );
+}
+
+.sparkle::before {
+  inset-block-start: 50%;
+  inset-inline: 0;
+  block-size: 2px;
+  translate: 0 -50%;
+}
+
+.sparkle::after {
+  --dir: to bottom;
+
+  inset-inline-start: 50%;
+  inset-block: 0;
+  inline-size: 2px;
+  translate: -50% 0;
+}
+
+/* --- responsivo ----------------------------------------------------------- */
+
+@media (width < 900px) {
+  /*
+   * Mobile não é desktop reduzido (§12): o campo RALA em vez de encolher. Os
+   * elementos maiores virariam sujeira sobre um texto que agora ocupa a largura
+   * toda, então simplesmente não entram.
+   */
+  .tier2 {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark {
+    animation: none;
+    opacity: var(--peak);
+  }
+}
