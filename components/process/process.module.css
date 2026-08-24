@@ -1,0 +1,317 @@
+/*
+ * A seção Método — "Do problema ao que funciona."
+ *
+ * A COMPOSIÇÃO É DA FASE 16, e é a terceira desta seção.
+ *
+ * A 14 tinha quatro painéis vazados sobre uma régua, todos visíveis e três
+ * deles vazios: a seção EXPLICAVA a jornada. A 15 trocou por um painel só, com
+ * uma imagem de cada vez ao longo de 3,8 telas — encenava, mas com a caixa, a
+ * coluna e o texto-sobre-arte de "O que construímos" logo acima. Duas seções
+ * seguidas dizendo a mesma coisa da mesma forma.
+ *
+ * Agora é uma PRANCHA EDITORIAL: bloco de texto centralizado no alto, quatro
+ * peças retrato lado a lado embaixo, todas presentes ao mesmo tempo. A leitura
+ * é contemplativa — chega-se, olham-se as quatro, segue-se.
+ *
+ * TUDO SAI DE `--reveal`, publicado por SectionProgress na seção. Nenhum estado
+ * tem gatilho próprio. O ritmo vem de `lib/motion/estados.ts` pelas
+ * propriedades que a página injeta.
+ *
+ * O PADRÃO DE `--reveal` É 1, e não os 0,34 da Fase 15. Lá o padrão tinha de
+ * ser o meio da janela do estado 01, senão a seção mostrava painel vazio antes
+ * do GSAP chegar. Aqui o estado final É a composição completa: sem JS, com
+ * movimento reduzido e no HTML servido, aparece a prancha inteira. É o que
+ * apagou o bloco `@media` de fallback que esta folha tinha — os quatro estados
+ * sequenciais que ele reescrevia em coluna não existem mais.
+ */
+
+/* --- a linha das quatro peças --------------------------------------------- */
+
+/*
+ * A LARGURA CAI DA ALTURA, e essa é a única forma de manter a razão estável sem
+ * circularidade em CSS.
+ *
+ * O caminho óbvio — quatro colunas `1fr` e uma `aspect-ratio` na peça — resolve
+ * pela largura disponível e deixa a altura crescer: numa tela baixa as peças
+ * estouram a dobra, e numa tela larga viram retângulos altos demais. Aqui é o
+ * contrário: mede-se o que sobrou de ALTURA, deriva-se a largura da peça a
+ * partir da razão desejada, e a linha simplesmente fica mais estreita quando a
+ * tela é baixa. A razão nunca muda, e nada nunca estoura.
+ *
+ * `--linha-reserva` é o que o bloco de texto consome antes da linha, e os
+ * números são MEDIDOS a 1672x941, não estimados:
+ *
+ *   124   padding superior — `max(header + space-lg, 12vh)`, e o piso é o header
+ *   230   o bloco de texto inteiro: headline em duas linhas, régua, lead em duas
+ *    64   `--space-xl`, o vão entre o bloco e a linha
+ *    40   `--space-lg`, o pé
+ *   ---
+ *   458   = 28,6rem, arredondado para cima
+ *
+ * A primeira versão punha 27rem e a captura mostrou o erro na hora: a linha
+ * terminava a 927 numa tela de 941, comendo 26 dos 40px de pé. O número não é
+ * cosmético — ele é a altura das quatro peças.
+ */
+.pecas {
+  --razao: 0.62;
+  --linha-reserva: 29rem;
+  --alt: min(58vh, calc(100dvh - var(--linha-reserva)));
+  --peca-w: calc(var(--alt) * var(--razao));
+  --vao: clamp(0.625rem, 0.85vw, 0.875rem);
+
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, var(--peca-w)));
+  gap: var(--vao);
+
+  /*
+   * O eixo vertical do `place-content` só faz diferença quando a LARGURA é quem
+   * limita.
+   *
+   * Na maior parte do desktop a altura manda: `--peca-w` sai dela, e a linha
+   * preenche a faixa que sobrou — centrar não move nada. Perto de 900px de
+   * largura a conta inverte: quatro colunas não cabem na medida de página, as
+   * peças encolhem por largura, e a altura delas passa a ser bem menor que a
+   * faixa disponível. Medido a 900x900: peças de 302px numa faixa de 436, com
+   * 134px de vazio pendurado embaixo. Centrado, esse excedente vira respiro dos
+   * dois lados.
+   */
+  place-content: center;
+  inline-size: 100%;
+}
+
+/*
+ * Numa tela baixa a peça a 0,62 fica estreita demais para quatro linhas de
+ * descrição. Abrir a razão devolve largura sem tirar altura de lugar nenhum, e
+ * a reserva encolhe junto: o vão entre o bloco de texto e a linha cai de
+ * `--space-xl` para `--space-lg` (ver app/page.module.css), que são 24px que
+ * voltam para a altura das peças.
+ */
+@media (height < 840px) {
+  .pecas {
+    --razao: 0.78;
+    --linha-reserva: 27.5rem;
+  }
+}
+
+/* --- uma peça ------------------------------------------------------------- */
+
+/*
+ * A entrada: opacidade e deslocamento vertical, e MAIS NADA.
+ *
+ * Sem `scale`. A Fase 15 tinha um sopro de 3% na chegada de cada estado, e ele
+ * custava o que esta fase existe para recuperar: escalar uma camada que contém
+ * uma fotografia a reamostra a cada quadro, justamente enquanto a imagem
+ * aparece. Em repouso o `translate` resolve para zero exato — sem reamostragem
+ * residual, sem camada meio-pixel fora da grade.
+ *
+ * `--e` é o avanço da entrada DESTA peça. O escalonamento sai de `--i`: são
+ * 0,03 do curso entre uma e a seguinte, o bastante para a ordem 01 a 04 se
+ * perceber uma vez, curto o bastante para caber num gesto de roda.
+ */
+.peca {
+  --de: calc(var(--p-de) + var(--i) * var(--p-passo));
+  --e: clamp(0, calc((var(--reveal, 1) - var(--de)) * var(--p-dur-inv)), 1);
+
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: var(--razao);
+  opacity: var(--e);
+  translate: 0 calc((1 - var(--e)) * 1.5rem);
+}
+
+/*
+ * O slot da arte existe como elemento, e não como `inset: 0` no `<img>`, pelo
+ * mesmo motivo do card de Serviços: o recorte tem de morar em algo que não seja
+ * o nó que se move.
+ */
+.visual {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.arte {
+  object-fit: cover;
+
+  /*
+   * QUAL faixa aparece é decisão de composição, por imagem, e vem de
+   * `ProcessStep.enquadramento` em lib/content/process.ts. A caixa mudou de
+   * razão nesta fase — de ~0,81 para ~0,62 — e o descarte vertical caiu de mais
+   * da metade da origem para quase nada, então os quatro valores foram
+   * recalibrados lá.
+   */
+  object-position: var(--arte-pos, 50% 50%);
+}
+
+/* --- o véu ---------------------------------------------------------------- */
+
+/*
+ * O VÉU NÃO É PARTE DA COMPOSIÇÃO. É o custo de legibilidade que cada arte
+ * cobra, e por isso a intensidade vem do CONTEÚDO — `--veu-topo` e `--veu-base`
+ * por etapa, em lib/content/process.ts —, com zero como padrão das quatro.
+ *
+ * A Fase 15 tinha um gradiente fixo cobrindo 44% da altura a até 88% de
+ * opacidade, aplicado igualmente às quatro. Isso é escurecer a arte para
+ * acomodar o texto, e o item 3 do briefing é explícito: as imagens passam
+ * intactas. Aqui a ordem se inverte — sobe-se este número apenas até
+ * `check:contrast` passar naquela imagem, e a primeira alavanca de contraste é
+ * o enquadramento, não este número.
+ *
+ * Em zero os dois pseudo-elementos existem e não pintam nada: transparente dos
+ * dois lados do gradiente.
+ */
+/*
+ * O VÉU É O FUNDO DO PRÓPRIO BLOCO DE TEXTO — e não um pseudo-elemento da peça
+ * com altura em porcentagem. Esta é a TERCEIRA geometria, e as duas anteriores
+ * erraram do mesmo jeito: por não acompanharem o texto.
+ *
+ * A primeira ia de `--veu` na borda a metade disso já em 40% da faixa, e a
+ * primeira linha da descrição caía onde o gradiente valia 62% do pico. A
+ * segunda pôs um platô cobrindo a zona de texto — e funcionou a 1672x941, onde
+ * a peça tem razão 0,62 e a descrição ocupa 13% da altura dela.
+ *
+ * Só que a razão da peça MUDA com a tela: a 1366 e abaixo ela vira 0,78, a peça
+ * fica mais baixa, e as mesmas quatro linhas de descrição passam a ocupar 30%
+ * da altura em vez de 13%. O platô de 17,6% deixava de alcançar o topo do
+ * texto, e a 03 e a 04 perdiam contraste — o que a captura de 1024x768 mostrou.
+ *
+ * Uma porcentagem da PEÇA nunca vai acompanhar uma caixa de TEXTO que cresce em
+ * linhas. Então o gradiente passa a ser o fundo do bloco de texto: o platô é
+ * exatamente a caixa dele, e a esmaecida vive na folga que o bloco já tinha do
+ * lado de dentro da peça. Vale em qualquer razão, em qualquer número de linhas,
+ * sem nenhum número novo para manter.
+ */
+
+/* --- o texto sobre a arte ------------------------------------------------- */
+
+/*
+ * Numeral e título no TOPO, descrição na BASE — o arranjo da referência de
+ * layout, e a distância mais curta entre "quatro peças de uma prancha" e
+ * "quatro cards". Nos cards de Serviços tudo se acumula na base; aqui o texto
+ * emoldura a imagem pelas duas pontas e o miolo dela fica inteiro.
+ *
+ * A folga interna sai de percentual da própria peça, não de `--space-*`: a peça
+ * muda de largura com a altura da tela, e uma folga fixa que respira bem a
+ * 316px sufoca a 208.
+ */
+.dadosTopo,
+.descricao {
+  position: absolute;
+  inset-inline: 0;
+  z-index: 2;
+  padding-inline: 7%;
+}
+
+/*
+ * O platô do gradiente cobre a caixa do texto e a folga de dentro da peça; a
+ * esmaecida acontece na folga do lado oposto, que existe só para isso. Em
+ * `--veu-topo: 0` — o padrão de três das quatro artes — o gradiente é
+ * transparente de ponta a ponta e não pinta nada.
+ */
+.dadosTopo {
+  inset-block-start: 0;
+  padding-block: 6.5% 9%;
+  background: linear-gradient(
+    to bottom,
+    rgb(0 16 30 / calc(var(--veu-topo, 0) * 100%)) 0%,
+    rgb(0 16 30 / calc(var(--veu-topo, 0) * 100%)) 64%,
+    rgb(0 16 30 / calc(var(--veu-topo, 0) * 46%)) 82%,
+    rgb(0 16 30 / 0%) 100%
+  );
+}
+
+.numeral {
+  font-size: clamp(1rem, 1.05vw, 1.2rem);
+  line-height: 1;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text);
+}
+
+.titulo {
+  margin-block-start: 0.5rem;
+  font-size: clamp(1.05rem, 1.25vw, 1.4rem);
+  line-height: 1.18;
+  letter-spacing: var(--tracking-snug);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+}
+
+.descricao {
+  inset-block-end: 0;
+  padding-block: 11% 7%;
+  font-size: clamp(0.8rem, 0.86vw, 0.875rem);
+  line-height: 1.6;
+  color: var(--text-muted);
+  background: linear-gradient(
+    to top,
+    rgb(0 16 30 / calc(var(--veu-base, 0) * 100%)) 0%,
+    rgb(0 16 30 / calc(var(--veu-base, 0) * 100%)) 70%,
+    rgb(0 16 30 / calc(var(--veu-base, 0) * 46%)) 86%,
+    rgb(0 16 30 / 0%) 100%
+  );
+}
+
+/* --- composição posta: fluxo e movimento reduzido ------------------------- */
+
+/*
+ * AS QUATRO POSTAS, sem entrada escalonada — e esta regra não é opcional.
+ *
+ * Sob movimento reduzido `--reveal` vale 1 e tudo já se resolveria sozinho. O
+ * caso que exige a regra é o outro: abaixo de 900px a seção deixa de ser presa
+ * (components/chrome/Section.module.css), mas o SectionProgress continua no
+ * ramo `no-preference` e continua publicando progresso real de rolagem. Sem
+ * isto, num celular as peças esperariam `--reveal` passar de 0,40 numa seção
+ * que cresce com o conteúdo — e a última só apareceria depois de já ter
+ * passado pela tela.
+ *
+ * Em fluxo, quem revela é a rolagem da página; a composição só precisa estar
+ * posta.
+ */
+@media (width < 900px), (prefers-reduced-motion: reduce) {
+  .peca {
+    --e: 1;
+
+    translate: none;
+  }
+}
+
+/* --- tablet e celular ----------------------------------------------------- */
+
+/*
+ * O 2x2 do tablet, e o limiar é PROVISÓRIO ATÉ A CAPTURA.
+ *
+ * A conta da linha de quatro já mostra o aperto chegando: a 1366x768 a peça cai
+ * para 262px e a 1024 daria ~200 com quatro linhas de descrição dentro. Se as
+ * capturas de 1024 e 960 mostrarem peça comprimida, este `900px` sobe — trocar
+ * quatro peças apertadas por quatro legíveis em duas linhas é ganho editorial,
+ * não concessão. O resto da folha não muda quando ele subir.
+ *
+ * Aqui a altura deixa de mandar na largura: em fluxo não há dobra a respeitar,
+ * e a peça volta a ser dimensionada pela coluna, com a razão governando a
+ * altura. É por isso que `--peca-w` sai de cena em vez de ser recalculado.
+ */
+@media (width < 900px) {
+  .pecas {
+    --razao: 0.7;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-inline-size: 34rem;
+    margin-inline: auto;
+  }
+}
+
+/*
+ * No celular, coluna única. Duas colunas a 390px dariam peças de ~165px: a
+ * imagem ainda se lê, a descrição não. O item 6 do briefing pede exatamente que
+ * elas não virem miniatura ilegível — e uma coluna de peças em largura cheia,
+ * empilhadas, continua sendo leitura contínua, sem gesto lateral e sem slider.
+ */
+@media (width < 600px) {
+  .pecas {
+    --razao: 0.8;
+
+    grid-template-columns: minmax(0, 1fr);
+    max-inline-size: 26rem;
+  }
+}
