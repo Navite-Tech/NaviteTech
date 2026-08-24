@@ -1,0 +1,818 @@
+/* Hero -------------------------------------------------------------------- */
+
+/*
+ * Composição medida em references/hero-reference.png (1672×941), com
+ * `node tools/measure-hero.cjs`. Marcos verticais em % da altura:
+ *
+ *   headline linha 1, topo de caixa alta   29,76%
+ *   headline linha 3, base                 52,92%
+ *   régua                                  57,49%
+ *   corpo, linha 1                         61,53%
+ *   corpo, linha 3, base                   70,03%
+ *   botão                                  72,69% .. 77,90%
+ *   indicador de rolagem, tique            86,62%
+ *
+ * Coluna de texto começa em x 6,04% — que é a margem de página (6vw).
+ */
+
+/* Preenche a tela presa da seção; a altura já vem do .viewport sticky. */
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  block-size: 100%;
+  /*
+   * A folga de baixo e maior que a de cima de proposito: com o conteudo
+   * centrado, ela e a alavanca que posiciona o bloco. A referencia poe o bloco
+   * de texto entre y 280 e 733, cujo centro cai em 53,8% da altura — abaixo do
+   * centro da tela, nao nele.
+   */
+  padding-block: calc(var(--header-height) + var(--space-lg)) 7.4rem;
+  padding-inline: var(--page-margin);
+}
+
+/*
+ * A SAIDA do hero (§9.2: "ao sair, o headline sobe 40px e faz fade em scrub").
+ *
+ * Deriva de `--reveal`, que SectionProgress publica na secao — sem gatilho
+ * proprio e sem escrita por quadro neste bloco. A janela vai de 0,55 a 0,94 do
+ * curso do hero: antes disso a peca ainda esta inteira e o texto tem de estar
+ * legivel; depois, a secao ja saiu de tela.
+ *
+ * `--fora` e o quanto ja saiu, de 0 a 1. Multiplica a opacidade que a animacao
+ * de entrada deixou, em vez de disputar com ela.
+ */
+.heroText {
+  --fora: clamp(0, calc((var(--reveal, 0) - 0.55) * 2.6), 1);
+
+  opacity: calc(1 - var(--fora));
+  translate: 0 calc(var(--fora) * -40px);
+
+  /*
+   * A linha mais larga do headline e "funcionar melhor.", que na referencia vai
+   * de x 102 a 694 — 592px sobre 1672. A coluna precisa comportar isso sem
+   * quebrar, senao o headline vira quatro linhas e toda a metrica vertical
+   * abaixo dele desce junto.
+   */
+  inline-size: min(100%, 40rem);
+}
+
+/*
+ * Vaos medidos, de tinta a tinta, na referencia:
+ *   base da 3a linha do headline -> topo da regua   43px
+ *   base da regua -> topo do corpo                  33px
+ *   base do corpo -> topo do botao                  25px
+ * Os valores abaixo sao o que produz esses vaos com o Inter deste projeto,
+ * conferidos por captura — nao os vaos em si, que dependem da metrica da fonte.
+ */
+.heroRule {
+  margin-block: 1.72rem 1.7rem;
+}
+
+/*
+ * Medida estreita de proposito: na referencia o corpo quebra em TRES linhas, de
+ * 332, 285 e ~150px. A mais larga, 332px, e o que define este limite — com os
+ * 432px de antes o texto cabia em duas linhas e o bloco inteiro encurtava.
+ */
+.heroLead {
+  max-inline-size: 21rem;
+}
+
+.heroCta {
+  margin-block-start: 2.55rem;
+}
+
+/* --- entrada do hero ------------------------------------------------------ */
+
+/*
+ * Ordem e tempos do §9.2: as três linhas do headline sob máscara, escalonadas
+ * de 80ms; depois a régua crescendo em scaleX; depois corpo e botão em fade
+ * com 18px; o indicador por último. Os marcadores de fundo entram depois de
+ * tudo — o atraso deles é passado em app/page.tsx.
+ *
+ * Tudo em `transform`, `opacity` e `clip-path`. Nenhuma propriedade que
+ * dispare layout, e nada preso à rolagem: é uma animação de carregamento que
+ * termina e sai do caminho.
+ */
+
+.heroTitle {
+  /* o `balance` da base brigaria com as quebras fixas de linha */
+  text-wrap: initial;
+}
+
+.line {
+  display: block;
+
+  /*
+   * A máscara corta pela caixa da linha. As folgas negativas no estado final
+   * devolvem o espaço dos descendentes ("g" de Tecnologia, "q" de que) — sem
+   * elas o clip-path os decepa justamente no fim da animação.
+   */
+  clip-path: inset(-0.16em -0.06em 100% -0.06em);
+  animation: line-clip var(--dur-reveal) var(--ease-out) forwards;
+  animation-delay: calc(0.12s + var(--i) * 80ms);
+}
+
+.lineInner {
+  display: block;
+  translate: 0 0.3em;
+  animation: line-rise var(--dur-reveal) var(--ease-out) forwards;
+  animation-delay: calc(0.12s + var(--i) * 80ms);
+}
+
+@keyframes line-clip {
+  to {
+    clip-path: inset(-0.16em -0.06em -0.28em -0.06em);
+  }
+}
+
+@keyframes line-rise {
+  to {
+    translate: 0 0;
+  }
+}
+
+.heroRule {
+  transform: scaleX(0);
+  animation: rule-grow var(--dur-base) var(--ease-out) forwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes rule-grow {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/*
+ * `visibility: hidden` durante a espera, e não só `opacity: 0`.
+ *
+ * A diferença é invisível na tela e decisiva na métrica. O Chrome mede o
+ * tamanho de um candidato a LCP no PRIMEIRO PINTE dele e nunca reavalia; um
+ * elemento pintado com opacidade exatamente zero é descartado ali e não volta.
+ * Como todo o conteúdo da primeira tela entra encenado (§9.2), a página não
+ * produzia candidato NENHUM: medido por A/B no mesmo build, com a entrada
+ * ligada o observador não registrava nada, e com ela desligada o lead entrava
+ * em 692ms com 22140px².
+ *
+ * `visibility: hidden` não pinta. O primeiro pinte passa a ser o primeiro
+ * quadro DA ANIMAÇÃO, com a caixa inteira e opacidade já acima de zero — que é
+ * exatamente quando o elemento de fato começa a existir para quem olha. A
+ * métrica passa a dizer a verdade em vez de não dizer nada.
+ *
+ * O estado final da animação é `forwards`, então a visibilidade permanece.
+ * Sem movimento, a regra lá embaixo devolve tudo de uma vez.
+ */
+.heroLead,
+.heroCta {
+  visibility: hidden;
+  opacity: 0;
+  animation: hero-rise var(--dur-reveal) var(--ease-out) forwards;
+}
+
+/*
+ * ESCALONAMENTO COMPRIMIDO, e o número saiu de uma medição.
+ *
+ * O lead é o maior elemento com conteúdo da primeira tela — é ele que o
+ * navegador reporta como LCP. Cada milissegundo de espera aqui entra
+ * INTEIRO na métrica: com os 0,58s originais, o LCP num aparelho de gama
+ * média sob 4G lento ficava em 3,5s.
+ *
+ * A ordem do §9.2 é preservada — headline, régua, corpo, botão, indicador —
+ * e os intervalos entre irmãos ficam em 80ms, que é exatamente o
+ * escalonamento que o §4.4 prescreve. O que encolheu foram os vãos de 100 a
+ * 200ms que tinham se acumulado entre eles.
+ */
+.heroLead {
+  animation-delay: 0.34s;
+}
+
+.heroCta {
+  animation-delay: 0.42s;
+}
+
+@keyframes hero-rise {
+  from {
+    visibility: visible;
+    opacity: 0;
+    translate: 0 18px;
+  }
+
+  to {
+    visibility: visible;
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* Problema ---------------------------------------------------------------- */
+
+/*
+ * Medido em problem-section-reference.png (1536x1024):
+ *   headline, 4 linhas, topo em 35,35% e avanco de 61px
+ *   regua                                61,62%
+ *   corpo, 3 linhas, topo em             66,11%
+ *   indicador de rolagem                 84,57%
+ * A linha mais larga do headline e "para entender.", com 336px = 21,9vw. E a
+ * medida que define a coluna: mais larga que isso e a quebra em quatro linhas
+ * se desfaz.
+ */
+.problemaText {
+  inline-size: min(100%, 24rem);
+}
+
+.problemaLead {
+  max-inline-size: 24rem;
+}
+
+/* Serviços ---------------------------------------------------------------- */
+
+/*
+ * Medido em references/services-reference.png (1672×941):
+ *
+ *   eyebrow                          28,27vh
+ *   título, 2 linhas, topo em        38,47vh, avanço 61px
+ *   régua                            52,39vh
+ *   corpo, 2 linhas, topo em         56,54vh, base em 61,85vh
+ *
+ * A largura vem da linha mais larga: "CONSTRUÍMOS." vai de 4,61 a 27,51vw.
+ *
+ * A referência começa a coluna em 4,61vw, mas o hero — que é a referência de
+ * alta fidelidade (§2) — começa em 6,04vw. As duas discordam sobre a margem;
+ * vale o hero, e a coluna usa `--page-margin` como todo o resto.
+ */
+.servicos {
+  position: relative;
+  display: flex;
+  align-items: center;
+  block-size: 100%;
+
+  /*
+   * Folga SIMÉTRICA, e isso importa: com o item centrado pelo flex, o centro do
+   * bloco cai no centro da caixa de conteúdo do container, não no da tela. Uma
+   * folga assimétrica desloca esse centro e a compensação de `--servicosText`
+   * passa a medir a partir do lugar errado — foi o que pôs a coluna 50px baixa
+   * na primeira captura.
+   */
+  padding-block: calc(var(--header-height) + var(--space-lg));
+  padding-inline: var(--page-margin);
+}
+
+.servicosText {
+  /*
+   * O bloco não fica no centro da tela: na referência ele ocupa de 28,27 a
+   * 61,85vh, cujo centro cai em 45,06vh. Com o item centrado pelo flex, uma
+   * folga inferior de M sobe o centro em M/2 — os 9,9vh que faltam para os
+   * 45,06 medidos. Em vh, e não em px, para que a proporção se mantenha em
+   * qualquer altura de tela.
+   */
+  inline-size: min(100%, 28rem);
+  margin-block-end: 9.9vh;
+}
+
+.servicosLead {
+  max-inline-size: 22rem;
+}
+
+/*
+ * O eyebrow fica SOLTO do título, ao contrário das outras seções: na referência
+ * ele cai em 28,27vh e a caixa alta do título só começa em 38,47vh — 84px de
+ * vão. É o que dá à coluna esquerda o ar de legenda de prancha.
+ */
+.servicosEyebrow {
+  margin-block-end: 4.6rem;
+}
+
+/* Processo ---------------------------------------------------------------- */
+
+/*
+ * UMA COLUNA CENTRALIZADA, e a composição de duas colunas saiu inteira.
+ *
+ * A Fase 15 tinha texto à esquerda e painel de estado à direita, posicionado a
+ * partir de `PAINEL_DE` — a mesma borda em que o trilho de Serviços começa,
+ * escolhida justamente para que o painel aparecesse onde o card 04 tinha
+ * acabado de sair. A continuidade funcionava; o efeito colateral é que o Método
+ * ficou parecido demais com "O que construímos": mesma caixa, mesma coluna
+ * ao lado, mesma arte com texto na base.
+ *
+ * Agora o bloco de texto é UM SÓ, centralizado no alto, e as quatro peças
+ * ficam embaixo dele, em linha. `PAINEL_DE` foi removido de
+ * lib/content/process.ts junto com as duas contas que dependiam dele.
+ *
+ * `container-type: inline-size` existe por uma razão só, e é a migração do
+ * bloco de texto: `cqi` mede a caixa de CONTEÚDO deste elemento — já sem as
+ * margens de página — e, ao contrário de `vw`, não conta a calha da barra de
+ * rolagem. É o que torna a conta do `translate` exata em qualquer largura.
+ */
+.processo {
+  position: relative;
+  container-type: inline-size;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  justify-items: center;
+  block-size: 100%;
+
+  /*
+   * 12vh, e não os 17vh da Fase 15. O piso continua sendo a barra do header —
+   * `check:responsivo` reprova título por baixo dela. O que mudou é o que vem
+   * embaixo: com quatro peças ocupando a metade inferior da tela, cada vh no
+   * topo é altura que sai delas.
+   */
+  padding-block: max(calc(var(--header-height) + var(--space-lg)), 12vh) var(--space-lg);
+  padding-inline: var(--page-margin);
+}
+
+/*
+ * A MIGRAÇÃO — da margem esquerda até o centro, em `translate` puro.
+ *
+ * O bloco tem a geometria FINAL o tempo inteiro: largura fixa, centrado pelo
+ * `justify-items` do pai, texto centralizado. Nada aqui muda de largura nem de
+ * alinhamento durante a rolagem, e isso é lei, não conveniência — animar
+ * largura é animar layout, e uma requebra de linha no meio do percurso seria um
+ * salto no meio de um movimento que precisa ler como contínuo.
+ *
+ * A CONTA. Centrado, o bloco tem a borda esquerda em `(cqi - w) / 2`. Para
+ * levá-la à borda esquerda do conteúdo, translada-se `-(cqi - w) / 2`, que é
+ * `w/2 - cqi/2`. Em CSS: `50%` é metade da caixa do próprio elemento e `50cqi`
+ * é metade da caixa de conteúdo do contêiner — daí `50% - 50cqi`, exato para
+ * qualquer largura de bloco e de tela, sem número mágico.
+ *
+ * O `--te` é um smoothstep sobre `--t`. A rolagem entrega progresso LINEAR, e
+ * uma travessia longa em linha reta lê como um objeto sendo arrastado; a curva
+ * em S dá partida e chegada. É a mesma função que o GSAP chamaria de
+ * `power2.inOut`, escrita em `calc` porque aqui não há tween — há uma
+ * propriedade herdada.
+ *
+ * O 3vh de subida acompanha: o bloco não só vai ao centro, ele SOBE um pouco,
+ * abrindo a altura que a linha de peças precisa. Sem isso a recomposição lê
+ * como um deslize lateral; com isso, como uma composição se reorganizando.
+ */
+.processoText {
+  --t: clamp(0, calc((var(--reveal, 1) - var(--m-de)) * var(--m-inv)), 1);
+  --te: calc(var(--t) * var(--t) * (3 - 2 * var(--t)));
+
+  inline-size: min(100%, 30rem);
+  margin-block-end: var(--space-xl);
+  text-align: center;
+  translate: calc((50% - 50cqi) * (1 - var(--te))) calc(3vh * (1 - var(--te)));
+}
+
+/*
+ * A régua herda a mesma medida das outras seções e ganha `auto` nas laterais —
+ * `text-align` não centra um bloco, e a Rule é `display: block` por ser uma
+ * barra sólida de 3px, não um caractere.
+ */
+.processoRule {
+  inline-size: clamp(1.75rem, 2.54vw, 3rem);
+  block-size: 3px;
+  margin: 2.1rem auto 1.6rem;
+}
+
+/*
+ * Tela baixa: o vão entre o bloco e a linha de peças encolhe um degrau. São 24px
+ * que voltam para a altura das quatro, e o `--linha-reserva` de
+ * components/process/process.module.css desce junto — os dois números descrevem
+ * a mesma folga e têm de mudar juntos.
+ */
+@media (height < 840px) {
+  .processoText {
+    margin-block-end: var(--space-lg);
+  }
+}
+
+/*
+ * 28rem de medida, e a largura é CONTROLADA de propósito: a frase tem 58
+ * caracteres e cabe numa linha só até ~34rem. Numa linha só ela fica mais larga
+ * que o headline e desmonta a pirâmide — o subtítulo passa a ser o elemento
+ * mais largo da composição. Em duas linhas, ele fica contido sob o título, que
+ * é o que a referência de layout mostra e o que o briefing pede.
+ */
+.processoLead {
+  max-inline-size: 28rem;
+  margin-block-start: var(--space-md);
+  margin-inline: auto;
+  color: var(--text-muted);
+}
+
+/* FAQ --------------------------------------------------------------------- */
+
+/*
+ * Duas colunas (§9.6): o título à esquerda, preso, e a lista à direita. Aqui o
+ * `sticky` é do BLOCO, não da tela — a seção está em fluxo, então a coluna
+ * acompanha a leitura das perguntas e para quando a seção acaba.
+ */
+.faq {
+  display: grid;
+  grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
+  gap: var(--space-2xl);
+  align-items: start;
+  /*
+   * O bloco fica CENTRADO na tela, não colado no topo. A seção é a única em
+   * fluxo e tem folga de sobra — 235px além do conteúdo, que é o curso de que a
+   * coreografia precisa para levar a peça a opacidade 0. Ancorado no topo,
+   * esse excedente virava um vazio de 450px embaixo, que lê como seção
+   * inacabada; repartido em cima e embaixo, lê como respiro — que é o que o
+   * §9.6 pede de uma seção de desaceleração.
+   */
+  align-content: center;
+  min-block-size: 100dvh;
+  padding-block: calc(var(--header-height) + var(--space-2xl)) var(--space-2xl);
+  padding-inline: var(--page-margin);
+}
+
+.faqText {
+  position: sticky;
+  inset-block-start: calc(var(--header-height) + var(--space-lg));
+}
+
+/* Contato ----------------------------------------------------------------- */
+
+/*
+ * A composição fecha em duas faixas, e a divisão é imposta pela peça.
+ *
+ * O `( )` reconstituído ocupa 481px de altura em 1672×941, dos quais só os 376
+ * do vão interno servem para texto. Headline, régua e lead somam 248px e cabem
+ * lá dentro; o formulário, com quatro campos, mede 370 e não caberia de forma
+ * alguma. Centrar tudo na tela — que foi a primeira tentativa — punha os campos
+ * atravessando as duas crescentes.
+ *
+ * Então: a peça fecha em cima com a chamada dentro dela, e o formulário fica
+ * abaixo, em fundo limpo. `align-items: start` com folga em vh para que a
+ * relação com a peça, que também é posicionada em vh, não se desfaça em outra
+ * altura de tela.
+ */
+.contato {
+  display: flex;
+  /* `flex-start`, e não `start`: em flexbox são a mesma coisa, mas `start`
+     dispara aviso de suporte misto no autoprefixer a cada build. */
+  align-items: flex-start;
+  justify-content: center;
+  block-size: 100%;
+  /*
+   * A folga de cima é a BORDA DE CIMA DA PEÇA, calculada: a tinta do `( )` vai
+   * de `39,5vh − 0,40 do lado` a `39,5vh + 0,40 do lado`. Assim a primeira
+   * faixa do bloco coincide com a peça em qualquer janela, em vez de coincidir
+   * só na de referência.
+   *
+   * O `max` é um piso: numa janela larga e baixa a peça sobe até passar por
+   * trás do header, e a chamada não pode ir junto.
+   */
+  padding-block: max(calc(var(--header-height) + 0.5rem), calc(39.5vh - 0.4 * var(--symbol-size)))
+    var(--space-lg);
+  padding-inline: var(--page-margin);
+}
+
+/*
+ * A largura sai do vão da peça, não da tipografia — e por isso é medida EM
+ * FUNÇÃO da peça, não em rem.
+ *
+ * O headline e o lead ficam DENTRO do `( )`, e o vão é um círculo cujo
+ * diâmetro é 0,63 do lado do símbolo. Como `--symbol-size` é
+ * `min(33,33vw, 62vh)`, a peça encolhe junto com a janela e uma medida fixa
+ * deixa de caber: em 26rem o bloco funcionava a 1672px de largura e, a 1280,
+ * o headline atravessava as duas crescentes — medido, a peça cai de 557 para
+ * 427px enquanto o texto continuava com os mesmos 416.
+ *
+ * E não basta ser proporcional: o vão é um CÍRCULO, então o que cabe é um
+ * retângulo inscrito — `W² + H² ≤ D²`. Com o vão medindo 0,628 do lado do
+ * símbolo e a chamada com ~156px de altura, 0,48 do lado cabe com folga em
+ * 1672, 1440 e 1280. Em 0,72, que era o valor anterior, a última linha do lead
+ * atravessava a crescente esquerda a partir de 1440.
+ */
+.contatoBloco {
+  inline-size: min(100%, calc(var(--symbol-size) * 0.48));
+  text-align: center;
+
+  /*
+   * DUAS FAIXAS, e a primeira tem a altura da peça — não a altura do texto.
+   *
+   * Enquanto o formulário simplesmente vinha depois do lead, com uma folga
+   * fixa, a composição só fechava na janela de referência: em 1672×941 sobravam
+   * 11px e em 1280×900 o botão era cortado. O que separa as duas faixas não é
+   * respiro, é a crescente de baixo, e ela é medida em `--symbol-size`.
+   *
+   * A primeira faixa tem exatamente a altura da TINTA da peça — 0,80 do lado
+   * do símbolo, medido — mais um vão de 1,25rem. Como o bloco começa na borda
+   * de cima da peça (ver `.contato`), a chamada fica centrada no vão dela e o
+   * formulário começa onde a crescente de baixo acaba, em qualquer janela.
+   */
+  display: grid;
+  grid-template-rows: calc(0.8 * var(--symbol-size) + 1.25rem) auto;
+}
+
+/* A chamada, centrada no vão da peça. */
+.contatoChamada {
+  display: grid;
+  align-content: center;
+}
+
+/*
+ * Menor que `.title`, e por geometria: o vão da peça é um CÍRCULO, e na altura
+ * do headline a corda já não é o diâmetro. Medido a 1280px, com o corpo de
+ * `.title` (46px) a palavra "problema." saía com 235px numa corda de 240 —
+ * atravessando as duas crescentes. Este clamp a deixa em 184.
+ */
+.contatoTitulo {
+  font-size: clamp(1.9rem, 2.8vw, 3rem);
+  line-height: var(--leading-title);
+  letter-spacing: var(--tracking-title);
+  font-weight: var(--weight-medium);
+}
+
+.contatoRule {
+  margin-inline: auto;
+}
+
+.contatoLead {
+  margin-inline: auto;
+  /* O bloco já limita; o lead herda a medida dele. */
+  max-inline-size: 100%;
+  font-size: var(--text-small);
+}
+
+/*
+ * CTA em tela BAIXA — a composição muda de eixo, e por medição.
+ *
+ * A composição da Fase 10 empilha: a peça fecha em cima com a chamada dentro do
+ * vão dela, o formulário logo abaixo. Ela foi calibrada em 1280x900, 1440x900 e
+ * 1672x941, todas ALTAS, e depende de um orçamento vertical que some quando a
+ * tela encurta. Medido o botão "Enviar" contra a base da tela:
+ *
+ *   1366x768   87px ABAIXO da dobra      1280x800   32px abaixo
+ *   1024x768   13px abaixo               1180x820    2px abaixo
+ *   1280x900   33px de folga             1440x900   12px de folga
+ *
+ * Como a seção fica presa em 100dvh, o que passa da dobra é INALCANÇÁVEL: não
+ * havia como enviar o formulário num notebook de 768px de altura.
+ *
+ * Encolher a peça não resolve — a conta pede escala 0,43 a 768px de altura, e
+ * aí o `( )` reconstituído deixa de ser o fechamento da narrativa e vira um
+ * logotipo pequeno em cima de um formulário. O que a tela baixa tem de sobra é
+ * LARGURA, e é nela que a composição passa a se apoiar: chamada à esquerda,
+ * peça no meio, formulário à direita. A peça não se move um pixel — as duas
+ * colunas é que se afastam para não cruzá-la.
+ *
+ * A coluna do meio é a TINTA da peça, e não um palpite: 0,9652 do lado do
+ * viewBox (bbox medida do path) vezes a escala 0,80 do `ctaClosed` = 0,7722 do
+ * `--symbol-size`, mais uma folga de cada lado.
+ */
+@media (width >= 900px) and (height < 880px) {
+  /*
+   * Folga SIMÉTRICA, e é ela que casa as colunas com a peça.
+   *
+   * Com o item centrado pelo flex, o centro do bloco cai no centro da caixa de
+   * conteúdo. Igualando as duas folgas, esse centro é exatamente 50% da altura
+   * da tela — que é a linha em que `CTA_BAIXA` fecha o `( )`. As duas coisas
+   * coincidem em qualquer altura de tela, sem número mágico de nenhum dos dois
+   * lados.
+   */
+  .contato {
+    align-items: center;
+    padding-block: calc(var(--header-height) + var(--space-md));
+  }
+
+  .contatoBloco {
+    inline-size: 100%;
+    grid-template-rows: none;
+    grid-template-columns:
+      minmax(0, 1fr)
+      calc(0.7722 * var(--symbol-size) + 2 * var(--space-lg))
+      minmax(0, 1fr);
+    align-items: center;
+    text-align: start;
+  }
+
+  /*
+   * As duas colunas encostam na peça, em vez de encostarem nas margens: é o
+   * que mantém a composição lendo como UMA coisa com o `( )` no centro, e não
+   * como duas colunas com um símbolo perdido no meio.
+   */
+  .contatoChamada {
+    grid-column: 1;
+    justify-self: end;
+    max-inline-size: 24rem;
+  }
+
+  .contatoBloco > :nth-child(2) {
+    grid-column: 3;
+    justify-self: start;
+    inline-size: 100%;
+    max-inline-size: 24rem;
+  }
+
+  .contatoRule,
+  .contatoLead {
+    margin-inline: 0;
+  }
+
+  .contatoRule {
+    margin-block: var(--space-sm) var(--space-xs);
+  }
+}
+
+/* Cascas de seção --------------------------------------------------------- */
+
+.shell {
+  display: flex;
+  align-items: center;
+  block-size: 100%;
+  padding-block: var(--space-2xl);
+  padding-inline: var(--page-margin);
+}
+
+.shellText {
+  inline-size: min(100%, 40rem);
+}
+
+/*
+ * Regua das secoes: 39x3px sobre 1536 na referencia do Problema = 2,54vw x 3px.
+ * E menor que a do hero (3,35vw x 4px) — a hierarquia acompanha o tamanho do
+ * bloco a que a regua pertence.
+ */
+.rule {
+  inline-size: clamp(1.75rem, 2.54vw, 3rem);
+  block-size: 3px;
+  margin-block: 2.1rem 1.6rem;
+}
+
+/*
+ * Mesma dupla de situações da casca de seção (components/chrome/Section.module.css):
+ * abaixo de 900px e com movimento reduzido, nada fica preso, e as cascas voltam
+ * a crescer com o conteúdo.
+ */
+@media (width < 900px), (prefers-reduced-motion: reduce) {
+  .problemaText {
+    inline-size: 100%;
+  }
+
+  /*
+   * No mobile a seção deixa de ser presa e cresce com o conteúdo, então a casca
+   * precisa da folga do header — que no desktop vinha do centramento vertical.
+   *
+   * A folga era do header MAIS a faixa do contador `NN — 06`, que ficava em
+   * `sticky` de altura zero e por isso não empurrava nada: quem abria espaço
+   * para ele era esta conta. O contador saiu na Fase 14 e a faixa saiu com ele —
+   * `--space-xl` virou `--space-lg`, e com a barra flutuante custando 84px em
+   * vez de 144 a seção começa 100px mais alta do que começava, sem que nada
+   * tenha encolhido.
+   */
+  .hero,
+  .shell,
+  .servicos,
+  .processo,
+  .contato {
+    block-size: auto;
+    min-block-size: 100dvh;
+    padding-block: calc(var(--header-height) + var(--space-lg)) var(--space-2xl);
+  }
+
+  /* a pilha vira lista e passa a ocupar o fluxo, abaixo da coluna de texto */
+  .servicos,
+  .processo {
+    display: block;
+  }
+
+  .servicosText {
+    inline-size: 100%;
+    margin-block-end: var(--space-xl);
+  }
+
+  /*
+   * Em fluxo o bloco continua centralizado, e a migração simplesmente não
+   * acontece: sem duas colunas não há de onde migrar, e `50% - 50cqi` já tende
+   * a zero quando o bloco ocupa a largura do contêiner. O `translate: none`
+   * fica explícito mesmo assim — é mais barato de ler do que de deduzir.
+   */
+  .processoText {
+    inline-size: min(100%, 30rem);
+    margin-block-end: var(--space-xl);
+    margin-inline: auto;
+    translate: none;
+  }
+
+  /*
+   * O `( )` vira marca d'água atrás do conteúdo no mobile (§9.7), então a
+   * coluna deixa de ser limitada pelo vão da peça e passa a ser limitada pela
+   * leitura. Alinhada à esquerda: um formulário centralizado obriga o olho a
+   * procurar o começo de cada rótulo.
+   */
+  .faq,
+  .contato {
+    display: block;
+    padding-block: calc(var(--header-height) + var(--space-xl)) var(--space-2xl);
+  }
+
+  .faqText {
+    position: static;
+    margin-block-end: var(--space-lg);
+  }
+
+  .contatoBloco {
+    inline-size: 100%;
+    max-inline-size: 34rem;
+    text-align: start;
+  }
+
+  .contatoBloco {
+    display: block;
+    grid-template-rows: none;
+  }
+
+  .contatoRule,
+  .contatoLead {
+    margin-inline: 0;
+  }
+
+  /*
+   * A régua ganha respiro — só aqui.
+   *
+   * Ela não tem margem própria (components/ui/Rule.module.css é só geometria),
+   * e no desktop isso funciona porque a chamada fica centrada no vão da peça,
+   * com o headline em 47px: a régua cai bem abaixo do descendente do "p" de
+   * "problema.". A 390px o headline é 30px, e medido a régua começava no mesmo
+   * pixel em que a caixa do título termina — encostada no descendente, com o
+   * lead colado logo abaixo.
+   *
+   * A composição de desktop, calibrada e aprovada na Fase 10, não é tocada.
+   */
+  .contatoRule {
+    margin-block: var(--space-sm) var(--space-xs);
+  }
+
+  .contatoChamada {
+    margin-block-end: var(--space-xl);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * Sem entrada encenada: tudo já está no lugar. O conteúdo é o mesmo — só não
+   * chega em ondas.
+   */
+  .line,
+  .lineInner,
+  .heroRule,
+  .heroLead,
+  .heroCta {
+    animation: none;
+    visibility: visible;
+    opacity: 1;
+    clip-path: none;
+    translate: none;
+    transform: none;
+  }
+
+  /* sem saida encenada: a secao simplesmente rola para fora */
+  .heroText {
+    opacity: 1;
+    translate: none;
+  }
+}
+
+/*
+ * O CTA da seção Serviços — discreto, na coluna esquerda.
+ *
+ * Mesma gramática da ação do header: uma palavra e um traço que aponta, em
+ * brass. Não é pílula: a página já tem uma no hero, e duas pílulas na mesma
+ * narrativa transformariam a conversão em insistência.
+ */
+.servicosCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-block-start: var(--space-lg);
+  font-size: var(--text-small);
+  color: var(--brass);
+  text-decoration: none;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
+.servicosCta:hover {
+  color: var(--bone);
+}
+
+.servicosCtaSeta {
+  position: relative;
+  display: block;
+  inline-size: 2.25rem;
+  block-size: 1px;
+  background: linear-gradient(to right, rgb(167 158 123 / 25%), currentcolor);
+  transition: inline-size var(--dur-short) var(--ease-out);
+}
+
+.servicosCtaSeta::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 0;
+  inline-size: 5px;
+  block-size: 5px;
+  border-block-start: 1px solid currentcolor;
+  border-inline-end: 1px solid currentcolor;
+  rotate: 45deg;
+  translate: 0 -50%;
+}
+
+.servicosCta:hover .servicosCtaSeta {
+  inline-size: 3rem;
+}
