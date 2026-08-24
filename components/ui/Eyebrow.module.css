@@ -1,0 +1,9 @@
+.root {
+  font-family: var(--font-brand);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  line-height: 1.4;
+  color: var(--text-muted);
+}

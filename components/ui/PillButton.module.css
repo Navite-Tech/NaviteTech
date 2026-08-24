@@ -1,0 +1,67 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  /* 214 × 50px medidos no hero-reference.png */
+  min-block-size: 50px;
+  padding-inline: 1.5rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-small);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-micro) var(--ease-out),
+    background-color var(--dur-micro) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+
+.outline {
+  border: 1px solid var(--line-bone);
+  background-color: transparent;
+  color: var(--text);
+}
+
+.outline:not(:disabled):hover {
+  border-color: var(--bone-dim);
+  transform: translateY(-1px);
+}
+
+.solid {
+  border: 1px solid var(--brass);
+  background-color: var(--brass);
+  color: var(--navy-900);
+}
+
+.solid:not(:disabled):hover {
+  background-color: #b6ad88;
+  border-color: #b6ad88;
+  transform: translateY(-1px);
+}
+
+/*
+ * Desabilitado enquanto o envio está em voo. `cursor: not-allowed` e opacidade
+ * — sem tirar o botão do fluxo de foco, que faria o foco pular para outro lugar
+ * no meio de uma submissão.
+ */
+.root:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.arrow {
+  flex: none;
+  transition: transform var(--dur-short) var(--ease-out);
+}
+
+.root:not(:disabled):hover .arrow {
+  transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root:hover,
+  .root:hover .arrow {
+    transform: none;
+  }
+}

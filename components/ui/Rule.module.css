@@ -1,0 +1,15 @@
+/*
+ * 56×4px medidos em hero-reference.png (1672px de largura) = 3,35vw × 4px.
+ *
+ * A largura acompanha a viewport porque foi assim que a referência foi medida;
+ * a espessura não, porque 4px lê igual em qualquer largura de desktop e um fio
+ * fracionário só produziria antialiasing.
+ */
+
+.root {
+  display: block;
+  inline-size: clamp(2.25rem, 3.35vw, 4rem);
+  block-size: 4px;
+  background-color: var(--sage);
+  transform-origin: left center;
+}
