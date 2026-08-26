@@ -30,9 +30,9 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    ".next-prod/types/**/*.ts",
     ".next/types/**/*.ts",
-    "next-env.d.ts",
-    ".next-prod/types/**/*.ts"
+    "next-env.d.ts"
   ],
   "exclude": ["node_modules", "scripts"]
 }

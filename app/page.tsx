@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Fragment } from 'react';
 import { Section } from '@/components/chrome/Section';
 import { CubeStage } from '@/components/cubes/CubeStage';
@@ -16,8 +17,16 @@ import { PillButton } from '@/components/ui/PillButton';
 import { HERO_AMBIENT } from '@/lib/content/ambient';
 import { CONTATO_COPY } from '@/lib/content/contato';
 import { JOURNEY_ID } from '@/lib/scroll/triggers';
-import { faqJsonLd, organizationJsonLd, serializar } from '@/lib/seo/jsonld';
+import { PAGINAS_SERVICO } from '@/lib/content/servicos-pages';
+import { faqJsonLd, organizationJsonLd, serializar, webSiteJsonLd } from '@/lib/seo/jsonld';
+import { HOME_DESCRIPTION, HOME_TITLE, metadataDePagina } from '@/lib/seo/metadata';
 import styles from './page.module.css';
+
+export const metadata = metadataDePagina({
+  path: '/',
+  title: { absolute: HOME_TITLE },
+  description: HOME_DESCRIPTION,
+});
 
 /**
  * Estrutura narrativa das 6 seções.
@@ -45,8 +54,8 @@ export default function Page() {
        * ld+json não é metadata — é conteúdo que descreve a página. O Google lê
        * nos dois lugares.
        *
-       * `Organization` hoje carrega dois campos verdadeiros. Ele cresce sozinho
-       * quando `lib/config/site.ts` for preenchido.
+       * `Organization` e `WebSite` saem com o que `site.ts` sustenta hoje.
+       * `Service` fica nas landings.
        */}
       <script
         type="application/ld+json"
@@ -56,6 +65,12 @@ export default function Page() {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: serializar(organizationJsonLd()!) }}
+        />
+      )}
+      {webSiteJsonLd() && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializar(webSiteJsonLd()!) }}
         />
       )}
 
@@ -195,6 +210,19 @@ export default function Page() {
                   Conte o problema
                   <span className={styles.servicosCtaSeta} aria-hidden="true" />
                 </a>
+                {/*
+                 * Links das landings ficam NESTA coluna, visível a seção inteira.
+                 * Dentro dos cards da pilha seriam quatro paradas de teclado
+                 * atrás de overflow:hidden — o mesmo defeito que tirou o CTA
+                 * de dentro de cada card.
+                 */}
+                <ul className={styles.servicosLinks}>
+                  {PAGINAS_SERVICO.map((pagina) => (
+                    <li key={pagina.path}>
+                      <Link href={pagina.path}>{pagina.navLabel}</Link>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
               <ServiceCardStack />

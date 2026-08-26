@@ -39,6 +39,12 @@
   margin: 0;
 }
 
+.servicos {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+}
+
 .link {
   font-size: var(--text-small);
   color: var(--text-muted);
@@ -50,13 +56,22 @@
   color: var(--text);
 }
 
+.origem {
+  inline-size: 100%;
+  margin: 0;
+  padding-block-start: var(--space-md);
+  border-block-start: 1px solid var(--line-soft);
+  font-size: var(--text-small);
+  color: var(--text-muted);
+  max-inline-size: 46rem;
+}
+
 .legal {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
   inline-size: 100%;
-  padding-block-start: var(--space-md);
-  border-block-start: 1px solid var(--line-soft);
+  margin: 0;
   font-family: var(--font-brand);
   font-size: var(--text-micro);
   letter-spacing: var(--tracking-wide);

@@ -1,4 +1,4 @@
-import { FAQ } from '@/lib/content/faq';
+import { FAQ, type FaqItem } from '@/lib/content/faq';
 import styles from './faq.module.css';
 
 /**
@@ -14,20 +14,18 @@ import styles from './faq.module.css';
  * (§9.6: `grid-template-rows: 0fr → 1fr`): é preciso um elemento cuja ALTURA
  * possa ser interpolada e outro, dentro, que recorte o excedente. Nenhum dos
  * dois carrega semântica — a semântica inteira está no `<details>`.
+ *
+ * `itens` existe para as landings reusarem a mesma lista com FAQ própria.
+ * Na home o default continua sendo `lib/content/faq.ts`.
  */
-export function FaqList() {
+export function FaqList({ itens = FAQ }: { itens?: readonly FaqItem[] }) {
   return (
     <ul className={styles.lista}>
-      {FAQ.map((item, i) => (
+      {itens.map((item, i) => (
         <li key={item.id} className={styles.item} style={{ '--i': i } as React.CSSProperties}>
           <details className={styles.details} name="faq" id={`faq-${item.id}`}>
             <summary className={styles.pergunta}>
               <span>{item.pergunta}</span>
-              {/*
-               * O `+` que gira 45° e vira `×` (§9.6). Dois traços em SVG, não
-               * um glifo: um `+` tipográfico não fica centrado na caixa e a
-               * rotação expõe isso imediatamente.
-               */}
               <svg
                 className={styles.mais}
                 viewBox="0 0 16 16"

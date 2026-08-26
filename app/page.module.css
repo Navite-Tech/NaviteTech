@@ -816,3 +816,22 @@
 .servicosCta:hover .servicosCtaSeta {
   inline-size: 3rem;
 }
+
+.servicosLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.15rem;
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.servicosLinks a {
+  font-size: var(--text-small);
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.servicosLinks a:hover {
+  color: var(--bone);
+}

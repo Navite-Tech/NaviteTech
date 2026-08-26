@@ -1,13 +1,15 @@
 import { site } from '@/lib/config/site';
+import Link from 'next/link';
 import { Wordmark } from './Wordmark';
+import { ORIGEM_GEO, PAGINAS_SERVICO } from '@/lib/content/servicos-pages';
 import styles from './Footer.module.css';
 
 /**
  * Rodapé.
  *
- * Todos os dados institucionais vêm de lib/config/site.ts e são emitidos
- * CONDICIONALMENTE: enquanto forem `null`, o bloco simplesmente não aparece.
- * Nada fictício entra no HTML — ver §21.3 do plano.
+ * Dados institucionais vêm de lib/config/site.ts e saem CONDICIONALMENTE.
+ * Os links de serviço são as quatro landings públicas — o mapa do site
+ * visível, o mesmo conjunto do sitemap.
  */
 export function Footer() {
   const year = new Date().getFullYear();
@@ -17,8 +19,22 @@ export function Footer() {
     <footer className={styles.root}>
       <div className={styles.inner}>
         <div className={styles.brand}>
-          <Wordmark height={36} title={null} />
+          <Link href="/" aria-label="Navite Tech — início">
+            <Wordmark height={36} title={null} />
+          </Link>
         </div>
+
+        <nav className={styles.block} aria-label="Serviços">
+          <ul className={styles.servicos}>
+            {PAGINAS_SERVICO.map((pagina) => (
+              <li key={pagina.path}>
+                <Link href={pagina.path} className={styles.link}>
+                  {pagina.navLabel}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
         {hasContact && (
           <div className={styles.block}>
@@ -46,6 +62,8 @@ export function Footer() {
             ))}
           </ul>
         )}
+
+        <p className={styles.origem}>{ORIGEM_GEO}</p>
 
         <p className={styles.legal}>
           {site.legalName ?? site.name}

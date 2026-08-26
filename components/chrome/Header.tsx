@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { navAcao, navCentrais, navItems } from '@/lib/content/nav';
 import { Wordmark } from './Wordmark';
 import styles from './Header.module.css';
@@ -18,6 +20,9 @@ import styles from './Header.module.css';
  * pixel do conteúdo.
  */
 export function Header() {
+  const pathname = usePathname();
+  const naHome = pathname === '/';
+  const ancora = (id: string) => (naHome ? `#${id}` : `/#${id}`);
   const [condensed, setCondensed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -87,17 +92,17 @@ export function Header() {
   return (
     <header className={`${styles.root} ${condensed ? styles.condensed : ''}`}>
       <div className={styles.barra}>
-        <a href="#hero" className={styles.brand} aria-label="Navite Tech — início">
+        <Link href="/" className={styles.brand} aria-label="Navite Tech — início">
           <Wordmark height={28} title={null} />
-        </a>
+        </Link>
 
         <nav className={styles.nav} aria-label="Principal">
           <ul className={styles.list}>
             {navCentrais.map((item) => (
               <li key={item.target}>
-                <a href={`#${item.target}`} className={styles.link}>
+                <Link href={ancora(item.target)} className={styles.link}>
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -105,7 +110,7 @@ export function Header() {
 
         {navAcao && (
           <a
-            href={navAcao.href ?? `#${navAcao.target}`}
+            href={navAcao.href ?? ancora(navAcao.target)}
             className={styles.acao}
             {...(navAcao.href ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
           >
@@ -131,17 +136,31 @@ export function Header() {
         <ul className={styles.panelList}>
           {navItems.map((item) => (
             <li key={item.target}>
-              <a
-                href={item.href ?? `#${item.target}`}
-                className={styles.panelLink}
-                {...(item.href ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                onClick={() => {
-                  setMenuOpen(false);
-                  botao.current?.focus();
-                }}
-              >
-                {item.label}
-              </a>
+              {item.href ? (
+                <a
+                  href={item.href}
+                  className={styles.panelLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    botao.current?.focus();
+                  }}
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <Link
+                  href={ancora(item.target)}
+                  className={styles.panelLink}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    botao.current?.focus();
+                  }}
+                >
+                  {item.label}
+                </Link>
+              )}
             </li>
           ))}
         </ul>

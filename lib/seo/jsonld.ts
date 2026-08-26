@@ -1,13 +1,14 @@
-import { FAQ } from '@/lib/content/faq';
+import { FAQ, type FaqItem } from '@/lib/content/faq';
 import { site } from '@/lib/config/site';
+import { urlAbsoluta } from './metadata';
 
 /**
  * Dados estruturados (§15) — e a regra dura vale aqui como em todo o resto:
  * **só entra o que é verdadeiro e verificável na própria página**.
  *
- * Sem `Review`, sem `AggregateRating`, sem `Service`, sem `foundingDate`, sem
- * `numberOfEmployees`. Nada disso existe, e schema inventado é pior do que
- * schema ausente: ele afirma ao buscador algo que a página não sustenta.
+ * Sem `Review`, sem `AggregateRating`, sem `foundingDate`, sem
+ * `numberOfEmployees`. `Service` só sai nas landings, com nome, descrição e
+ * provider — nada de oferta, avaliação ou área de atendimento inventada.
  */
 
 type Json = Record<string, unknown>;
@@ -20,11 +21,11 @@ type Json = Record<string, unknown>;
  * cópia: se uma resposta mudar, o schema muda junto, e a possibilidade de os
  * dois divergirem simplesmente não existe.
  */
-export function faqJsonLd(): Json {
+export function faqJsonLd(itens: readonly FaqItem[] = FAQ): Json {
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: FAQ.map((item) => ({
+    mainEntity: itens.map((item) => ({
       '@type': 'Question',
       name: item.pergunta,
       acceptedAnswer: {
@@ -38,13 +39,17 @@ export function faqJsonLd(): Json {
 /**
  * `Organization`, com os campos que estiverem preenchidos — e só eles.
  *
- * Hoje isso são dois: `name` e `logo`. `url`, `legalName`, `taxId`, `sameAs` e
- * `contactPoint` entram sozinhos no dia em que `lib/config/site.ts` for
- * preenchido, sem que nada aqui precise mudar.
+ * `name` e `alternateName` sempre saem. `url` e `logo` entram com `site.url`.
+ * `legalName`, `taxId`, `sameAs` e `contactPoint` entram sozinhos no dia em
+ * que `lib/config/site.ts` for preenchido, sem que nada aqui precise mudar.
  *
  * `logo` só é emitido junto com `url`: o campo pede URL absoluta, e um caminho
  * relativo ali seria um dado inválido em vez de um dado ausente.
  */
+function organizationId(): string | null {
+  return site.url ? `${site.url}/#organization` : null;
+}
+
 export function organizationJsonLd(): Json | null {
   const org: Json = {
     '@context': 'https://schema.org',
@@ -52,6 +57,8 @@ export function organizationJsonLd(): Json | null {
     name: site.name,
     alternateName: site.shortName,
   };
+  const id = organizationId();
+  if (id) org['@id'] = id;
 
   if (site.url) {
     org.url = site.url;
@@ -79,6 +86,81 @@ export function organizationJsonLd(): Json | null {
  * passaria a ser interpretado como marcação. Escapando a barra, o JSON continua
  * válido — `<` é o mesmo caractere — e a sequência deixa de existir.
  */
+export function webSiteJsonLd(): Json | null {
+  if (!site.url) return null;
+  const siteId = `${site.url}/#website`;
+  const orgId = organizationId();
+  const siteNode: Json = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': siteId,
+    name: site.name,
+    url: site.url,
+  };
+  if (orgId) siteNode.publisher = { '@id': orgId };
+  return siteNode;
+}
+
+export function webPageJsonLd(opts: {
+  path: string;
+  name: string;
+  description: string;
+}): Json | null {
+  const url = urlAbsoluta(opts.path);
+  if (!url || !site.url) return null;
+  const page: Json = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': url,
+    url,
+    name: opts.name,
+    description: opts.description,
+    isPartOf: { '@id': `${site.url}/#website` },
+  };
+  const orgId = organizationId();
+  if (orgId) page.about = { '@id': orgId };
+  return page;
+}
+
+export function breadcrumbJsonLd(opts: { path: string; name: string }): Json | null {
+  const url = urlAbsoluta(opts.path);
+  if (!url || !site.url) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: site.name,
+        item: site.url,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: opts.name,
+        item: url,
+      },
+    ],
+  };
+}
+
+/**
+ * `Service` mínimo: nome, descrição e provider. Sem Offer, review,
+ * `areaServed` ou qualquer campo que a página não sustente.
+ */
+export function serviceJsonLd(opts: { name: string; description: string }): Json | null {
+  const orgId = organizationId();
+  if (!orgId) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: opts.name,
+    description: opts.description,
+    provider: { '@id': orgId },
+  };
+}
+
 export function serializar(dados: Json): string {
   return JSON.stringify(dados).replace(/</g, '\\u003c');
 }
