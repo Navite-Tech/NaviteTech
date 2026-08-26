@@ -9,6 +9,7 @@ export default tseslint.config(
     ignores: [
       '.next/**',
       '.next-prod/**',
+      '.next-seo-verify/**',
       'out/**',
       'node_modules/**',
       '.shots/**',

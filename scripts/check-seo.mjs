@@ -114,17 +114,15 @@ await run(
     );
 
     /*
-     * Com `site.url` em `null`, canonical e og:url NÃO podem existir: os dois
-     * exigem URL absoluta, e o Next resolveria relativo contra um
-     * `metadataBase` que também não existe.
+     * Com `site.url` preenchido, canonical e og:url da HOME são obrigatórios
+     * e têm de bater com o `<loc>` da home no sitemap — sem barra no final.
      */
     const canonical = h.tags.find((t) => t.nome === 'canonical');
     const ogUrl = h.tags.find((t) => t.nome === 'og:url');
-    lei(
-      canonical === undefined && ogUrl === undefined,
-      'sem canonical nem og:url enquanto não há domínio',
-      `${canonical ? 'canonical ' : ''}${ogUrl ? 'og:url' : ''}`,
-    );
+    const ogImage = h.tags.find((t) => t.nome === 'og:image');
+    lei(!!canonical?.valor, 'canonical da home presente', canonical?.valor ?? '—');
+    lei(!!ogUrl?.valor, 'og:url da home presente', ogUrl?.valor ?? '—');
+    lei(!!ogImage?.valor, 'og:image presente', ogImage?.valor ?? '—');
 
     for (const nome of ['og:title', 'og:description', 'og:type', 'og:locale', 'og:site_name']) {
       lei(
@@ -154,6 +152,7 @@ await run(
     const blocos = h.ld.map((t) => JSON.parse(t));
     const faq = blocos.find((b) => b['@type'] === 'FAQPage');
     const org = blocos.find((b) => b['@type'] === 'Organization');
+    const website = blocos.find((b) => b['@type'] === 'WebSite');
 
     lei(!!faq, 'FAQPage emitido');
     lei(faq?.mainEntity?.length === 6, 'com as seis perguntas', `${faq?.mainEntity?.length ?? 0}`);
@@ -177,18 +176,30 @@ await run(
 
     lei(!!org, 'Organization emitido');
     lei(org?.name === 'Navite Tech', 'com o nome verdadeiro', org?.name);
+    lei(!!org?.url && String(org.url).startsWith('https://'), 'com url absoluta', org?.url ?? '—');
+    lei(!!org?.logo, 'com logo absoluto');
+    lei(!!website, 'WebSite emitido');
+    lei(website?.url === org?.url, 'WebSite aponta para a mesma origem');
     /*
-     * E com NADA além do que existe. Estes cinco campos só podem aparecer
-     * depois que `lib/config/site.ts` for preenchido; enquanto ele estiver em
-     * `null`, um deles no schema significa que alguém inventou.
+     * Campos que só podem aparecer depois que `lib/config/site.ts` os preencher.
+     * `url` e `logo` já são verdadeiros. `Service` na HOME seria inventar um
+     * tipo que a homepage não descreve como serviço isolado.
      */
-    const inventados = ['url', 'legalName', 'taxId', 'sameAs', 'contactPoint', 'address'].filter(
+    const inventados = ['legalName', 'taxId', 'sameAs', 'contactPoint', 'address'].filter(
       (k) => org && k in org,
     );
-    lei(inventados.length === 0, 'e sem nenhum campo que ainda não existe', inventados.join(' '));
     lei(
-      !blocos.some((b) => ['Review', 'AggregateRating', 'Service', 'Product'].includes(b['@type'])),
-      'nenhum schema de avaliação ou serviço inventado',
+      inventados.length === 0,
+      'e sem nenhum campo institucional que ainda não existe',
+      inventados.join(' '),
+    );
+    lei(
+      !blocos.some((b) => ['Review', 'AggregateRating', 'Product'].includes(b['@type'])),
+      'nenhum schema de avaliação ou produto inventado',
+    );
+    lei(
+      !blocos.some((b) => b['@type'] === 'Service'),
+      'a home não emite Service — isso fica nas landings',
     );
 
     // ------------------------------------------------------------- rotas --
@@ -205,14 +216,74 @@ await run(
     }
 
     const robots = await (await fetch(`${url}/robots.txt`)).text();
-    lei(!/Sitemap:/i.test(robots), 'robots.txt não declara sitemap sem domínio');
+    lei(
+      /Sitemap:\s*https:\/\/tech\.navite\.com\.br\/sitemap\.xml/i.test(robots),
+      'robots.txt declara o sitemap absoluto',
+    );
     lei(/Disallow: \/contato\/estados/.test(robots), 'a rota de diagnóstico fica fora do rastreio');
 
     const mapa = await (await fetch(`${url}/sitemap.xml`)).text();
+    const locs = [...mapa.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)].map((m) => m[1]);
+    const esperadas = [
+      'https://tech.navite.com.br',
+      'https://tech.navite.com.br/desenvolvimento-de-software',
+      'https://tech.navite.com.br/criacao-de-sites',
+      'https://tech.navite.com.br/automacao-e-integracoes',
+      'https://tech.navite.com.br/inteligencia-artificial',
+    ];
     lei(
-      /<urlset[^>]*>\s*<\/urlset>/.test(mapa),
-      'sitemap válido e VAZIO enquanto não há domínio — nenhuma URL inventada',
+      locs.length === esperadas.length,
+      `sitemap tem ${esperadas.length} URLs públicas`,
+      `${locs.length}`,
     );
+    lei(
+      esperadas.every((e) => locs.includes(e)),
+      'e as cinco locs batem com as rotas públicas',
+      locs.filter((l) => !esperadas.includes(l)).join(' '),
+    );
+
+    lei(
+      canonical?.valor === esperadas[0] && ogUrl?.valor === esperadas[0],
+      'canonical e og:url da home iguais ao loc da home',
+      `${canonical?.valor} | ${ogUrl?.valor}`,
+    );
+
+    console.log('\n=== LANDINGS ===');
+    for (const loc of esperadas.slice(1)) {
+      const path = new URL(loc).pathname;
+      await navigate(`${url}${path}`, 2000);
+      await sleep(200);
+      const lp = await evaluate(CABECA);
+      const can = lp.tags.find((t) => t.nome === 'canonical')?.valor;
+      const og = lp.tags.find((t) => t.nome === 'og:url')?.valor;
+      const titulo = lp.tags.find((t) => t.tag === 'title')?.valor ?? '';
+      lei(can === loc, `canonical próprio em ${path}`, can ?? '—');
+      lei(og === loc, `og:url próprio em ${path}`, og ?? '—');
+      lei(
+        !!lp.tags.find((t) => t.nome === 'og:image')?.valor,
+        `og:image em ${path}`,
+        lp.tags.find((t) => t.nome === 'og:image')?.valor ?? '—',
+      );
+      lei(
+        titulo.includes('Navite Tech') && !titulo.startsWith('Navite Tech — Tecnologia'),
+        `title de serviço em ${path}`,
+        titulo,
+      );
+      lei(can !== esperadas[0], `não herda canonical da home (${path})`);
+      const ld = lp.ld.map((t) => JSON.parse(t));
+      lei(
+        ld.some((b) => b['@type'] === 'Service'),
+        `Service schema em ${path}`,
+      );
+      lei(
+        ld.some((b) => b['@type'] === 'BreadcrumbList'),
+        `BreadcrumbList em ${path}`,
+      );
+      lei(
+        !ld.some((b) => ['Review', 'AggregateRating', 'LocalBusiness'].includes(b['@type'])),
+        `sem review/local inventado em ${path}`,
+      );
+    }
 
     /*
      * O navegador pede `/favicon.ico` sozinho quando o documento não declara
