@@ -31,7 +31,7 @@ export const site: SiteConfig = {
   name: 'Navite Tech',
   shortName: 'Navite',
   locale: 'pt-BR',
-  url: null,
+  url: 'https://tech.navite.com.br',
   legalName: null,
   taxId: null,
   email: null,
